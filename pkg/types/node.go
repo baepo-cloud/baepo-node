@@ -4,13 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 )
 
 type (
 	NodeServerConfig struct {
 		IPAddr           string
-		ServerAddr       string
+		APIAddr          string
 		GatewayAddr      string
 		StorageDirectory string
 	}
@@ -37,8 +36,4 @@ type (
 
 		StopMachine(ctx context.Context, machineID string) (*Machine, error)
 	}
-)
-
-var (
-	ErrNodeMachineNotFound = errors.New("node machine not found")
 )

@@ -1,4 +1,4 @@
-package nodeserver
+package apiserver
 
 import (
 	"context"
@@ -27,13 +27,13 @@ func New(service types.NodeService, config types.NodeServerConfig) *Server {
 }
 
 func (s *Server) Start(ctx context.Context) error {
-	slog.Info("starting node server", slog.String("addr", s.config.ServerAddr))
+	slog.Info("starting api server", slog.String("addr", s.config.APIAddr))
 
 	mux := http.NewServeMux()
 	mux.Handle(v1connect.NewNodeServiceHandler(s))
 
 	s.httpServer = &http.Server{
-		Addr:    s.config.ServerAddr,
+		Addr:    s.config.APIAddr,
 		Handler: mux,
 		TLSConfig: &tls.Config{
 			GetConfigForClient: func(info *tls.ClientHelloInfo) (*tls.Config, error) {
@@ -55,7 +55,7 @@ func (s *Server) Start(ctx context.Context) error {
 
 	lis, err := tls.Listen("tcp", s.httpServer.Addr, s.httpServer.TLSConfig)
 	if err != nil {
-		return fmt.Errorf("failed to setup listener for node server: %w", err)
+		return fmt.Errorf("failed to setup listener for api server: %w", err)
 	}
 
 	go s.httpServer.Serve(lis)
@@ -63,6 +63,6 @@ func (s *Server) Start(ctx context.Context) error {
 }
 
 func (s *Server) Stop(ctx context.Context) error {
-	slog.Info("shutting down node server")
+	slog.Info("shutting down api server")
 	return s.httpServer.Shutdown(ctx)
 }

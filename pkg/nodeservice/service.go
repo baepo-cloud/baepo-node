@@ -110,7 +110,7 @@ func (s *Service) registerNode(ctx context.Context) error {
 			Register: &v1pb.NodeConnectClientEvent_RegisterRequest{
 				ClusterId:       "llllll",
 				BootstrapToken:  "",
-				ServerEndpoint:  s.getEndpoint(s.config.ServerAddr),
+				ApiEndpoint:     s.getEndpoint(s.config.APIAddr),
 				GatewayEndpoint: s.getEndpoint(s.config.GatewayAddr),
 				IpAddress:       s.config.IPAddr,
 			},

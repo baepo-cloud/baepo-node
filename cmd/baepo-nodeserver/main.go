@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"github.com/baepo-app/baepo-node/pkg/apiserver"
+	"github.com/baepo-app/baepo-node/pkg/gatewayserver"
 	"github.com/baepo-app/baepo-node/pkg/networkprovider"
-	"github.com/baepo-app/baepo-node/pkg/nodeserver"
 	"github.com/baepo-app/baepo-node/pkg/nodeservice"
 	"github.com/baepo-app/baepo-node/pkg/runtimeprovider"
 	"github.com/baepo-app/baepo-node/pkg/types"
@@ -29,7 +30,8 @@ func main() {
 		fx.Provide(provideRuntimeProvider),
 		fx.Provide(provideApiClient),
 		fx.Provide(fx.Annotate(nodeservice.New, fx.As(new(types.NodeService)))),
-		fx.Provide(nodeserver.New),
+		fx.Provide(apiserver.New),
+		fx.Provide(gatewayserver.New),
 		fx.Invoke(func(lc fx.Lifecycle, service types.NodeService) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {
@@ -40,7 +42,17 @@ func main() {
 				},
 			})
 		}),
-		fx.Invoke(func(lc fx.Lifecycle, server *nodeserver.Server) {
+		fx.Invoke(func(lc fx.Lifecycle, server *apiserver.Server) {
+			lc.Append(fx.Hook{
+				OnStart: func(ctx context.Context) error {
+					return server.Start(ctx)
+				},
+				OnStop: func(ctx context.Context) error {
+					return server.Stop(ctx)
+				},
+			})
+		}),
+		fx.Invoke(func(lc fx.Lifecycle, server *gatewayserver.Server) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {
 					return server.Start(ctx)
@@ -56,12 +68,12 @@ func main() {
 func provideConfig() types.NodeServerConfig {
 	config := types.NodeServerConfig{
 		IPAddr:           "127.0.0.1",
-		ServerAddr:       os.Getenv("NODE_SERVER_ADDR"),
+		APIAddr:          os.Getenv("NODE_API_ADDR"),
 		GatewayAddr:      os.Getenv("NODE_GATEWAY_ADDR"),
 		StorageDirectory: os.Getenv("NODE_STORAGE_DIRECTORY"),
 	}
-	if config.ServerAddr == "" {
-		config.ServerAddr = ":3443"
+	if config.APIAddr == "" {
+		config.APIAddr = ":3443"
 	}
 	if config.GatewayAddr == "" {
 		config.GatewayAddr = ":8443"

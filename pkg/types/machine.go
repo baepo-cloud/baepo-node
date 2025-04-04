@@ -31,6 +31,4 @@ const (
 	MachineStatusTerminated  MachineStatus = "terminated"
 )
 
-var (
-	ErrMachineNotFound = errors.New("machine not found")
-)
+var ErrMachineNotFound = errors.New("machine not found")

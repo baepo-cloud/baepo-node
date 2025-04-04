@@ -1,4 +1,4 @@
-package nodeserver
+package apiserver
 
 import (
 	"connectrpc.com/connect"
