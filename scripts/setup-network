@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+
+NETWORK_CIDR="192.168.100.0/24"
+BRIDGE_NAME="br0"
+GW_IP="192.168.100.1"
+
+if ! ip link show $BRIDGE_NAME &>/dev/null; then
+    echo "Creating bridge $BRIDGE_NAME..."
+    ip link add name $BRIDGE_NAME type bridge
+    ip addr add $GW_IP/24 dev $BRIDGE_NAME
+    ip link set $BRIDGE_NAME up
+    echo "Bridge $BRIDGE_NAME created and configured with IP $GW_IP"
+else
+    echo "Bridge $BRIDGE_NAME already exists"
+fi
+
+echo "Enabling IP forwarding..."
+sysctl -w net.ipv4.ip_forward=1
+
+echo "Setting up NAT for Internet access..."
+iptables -t nat -A POSTROUTING -s $NETWORK_CIDR -o eth0 -j MASQUERADE
+
+echo "Network setup completed successfully!"
+echo "Bridge: $BRIDGE_NAME"
+echo "Gateway IP: $GW_IP"
+echo "Network CIDR: $NETWORK_CIDR"

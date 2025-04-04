@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package v1;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/baepo-app/baepo-node/pkg/proto/v1";
+
+service InitD {
+  rpc Healthcheck(google.protobuf.Empty) returns (google.protobuf.Empty);
+}

@@ -1,0 +1,4 @@
+/vmlinux
+/cloud-hypervisor
+/initramfs.cpio.gz
+/volume-group

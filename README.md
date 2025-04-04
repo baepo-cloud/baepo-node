@@ -1,0 +1,13 @@
+arptables iptables ebtables required
+
+## Download cloud hypervisor
+```bash
+wget https://github.com/cloud-hypervisor/cloud-hypervisor/releases/download/v44.0/cloud-hypervisor -O ./resources/cloud-hypervisor
+chmod +x ./resources/cloud-hypervisor
+```
+
+## Building the kernel
+
+```bash
+wget https://github.com/cloud-hypervisor/linux/releases/download/ch-release-v6.12.8-20250114/vmlinux -O ./resources/vmlinux
+```

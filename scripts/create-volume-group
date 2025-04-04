@@ -1,0 +1,6 @@
+#!/bin/bash
+
+dd if=/dev/zero of=./resources/volume-group bs=1M count=10240
+losetup /dev/loop0 ./resources/volume-group
+pvcreate /dev/loop0
+vgcreate vg_sandbox /dev/loop0

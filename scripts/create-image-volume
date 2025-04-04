@@ -1,0 +1,26 @@
+#!/bin/bash
+VG=vg_sandbox
+IMAGE_NAME=code_interpreter
+DOCKER_IMAGE=e2bdev/code-interpreter:latest
+
+lvremove -y /dev/$VG/$IMAGE_NAME
+
+docker pull $DOCKER_IMAGE
+
+CONTAINER_ID=`docker container create $DOCKER_IMAGE`
+
+IMAGE_SIZE_BYTES=$(docker image inspect $DOCKER_IMAGE --format='{{.Size}}')
+SIZE_MB=$(( ($IMAGE_SIZE_BYTES / 1024 / 1024) * 3 / 2 + 500 ))
+echo "Creating logical volume of size ${SIZE_MB}MB for image $IMAGE_NAME"
+
+lvcreate -y --size ${SIZE_MB}M -n $IMAGE_NAME $VG /dev/loop0
+mkfs.ext4 /dev/$VG/$IMAGE_NAME
+mount /dev/$VG/$IMAGE_NAME /mnt
+
+docker export $CONTAINER_ID | tar -x -C /mnt
+docker inspect $CONTAINER_ID > /mnt/_config.json
+docker rm $CONTAINER_ID
+
+umount /mnt
+
+lvchange -p r /dev/$VG/$IMAGE_NAME

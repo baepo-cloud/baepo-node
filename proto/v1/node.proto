@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package v1;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/baepo-app/baepo-node/pkg/proto/v1";
+
+service NodeService {
+  rpc StartMachine(NodeStartMachineRequest) returns (NodeStartMachineReply);
+
+  rpc StopMachine(NodeStopMachineRequest) returns (google.protobuf.Empty);
+
+  rpc HealthcheckMachine(NodeHealthcheckMachineRequest) returns (NodeHealthcheckMachineReply);
+}
+
+message NodeStartMachineRequest {
+  string machine_id = 1;
+  int32 v_cpus = 2;
+  int64 memory = 3;
+  map<string, string> env = 4;
+}
+
+message NodeStartMachineReply {
+  NodeMachine machine = 1;
+}
+
+message NodeMachine {
+  string machine_id = 1;
+  NodeMachineState state = 2;
+  int64 pid = 3;
+  string tap_interface = 4;
+  string mac_address = 5;
+  string ip_address = 6;
+}
+
+enum NodeMachineState {
+  NodeMachineState_Unknown = 0;
+  NodeMachineState_Running = 1;
+  NodeMachineState_Degraded = 2;
+  NodeMachineState_Failed = 3;
+}
+
+message NodeStopMachineRequest {
+  string machine_id = 1;
+}
+
+message NodeHealthcheckMachineRequest {
+  string machine_id = 1;
+}
+
+message NodeHealthcheckMachineReply {
+  NodeMachine machine = 1;
+}
