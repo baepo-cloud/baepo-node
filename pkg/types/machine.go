@@ -1,16 +1,15 @@
 package types
 
 import (
-	"context"
 	"errors"
 )
 
 type (
-	MachineState string
+	MachineStatus string
 
 	Machine struct {
 		ID               string
-		State            MachineState
+		Status           MachineStatus
 		RuntimePID       int
 		Spec             *MachineSpec
 		Volume           *Volume
@@ -22,22 +21,14 @@ type (
 		Memory int64
 		Env    map[string]string
 	}
-
-	RuntimeProvider interface {
-		Create(ctx context.Context, machine *Machine) (int, error)
-
-		Boot(ctx context.Context, machine *Machine) error
-
-		Terminate(ctx context.Context, machine *Machine) error
-	}
 )
 
 const (
-	MachineStateScheduling  MachineState = "scheduling"
-	MachineStateStarting    MachineState = "starting"
-	MachineStateRunning     MachineState = "running"
-	MachineStateTerminating MachineState = "terminating"
-	MachineStateTerminated  MachineState = "terminated"
+	MachineStatusScheduling  MachineStatus = "scheduling"
+	MachineStatusStarting    MachineStatus = "starting"
+	MachineStatusRunning     MachineStatus = "running"
+	MachineStatusTerminating MachineStatus = "terminating"
+	MachineStatusTerminated  MachineStatus = "terminated"
 )
 
 var (

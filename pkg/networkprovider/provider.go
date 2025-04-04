@@ -55,11 +55,8 @@ func New() (*Provider, error) {
 	for _, link := range links {
 		if tapName := link.Attrs().Name; strings.HasPrefix(tapName, "tap") {
 			hwAddr := link.Attrs().HardwareAddr
-			if len(hwAddr) == 6 && hwAddr[0] == 0x52 && hwAddr[1] == 0x54 && hwAddr[2] == 0x00 {
-				index := (int(hwAddr[3]) << 16) | (int(hwAddr[4]) << 8) | int(hwAddr[5])
-				if index >= 0 && index < len(allocator.allocatedIPs) {
-					allocator.allocatedIPs[index] = tapName
-				}
+			if index := allocator.calculateIndexFromHwAddr(hwAddr); index != -1 {
+				allocator.allocatedIPs[index] = tapName
 			}
 		}
 	}
@@ -105,4 +102,15 @@ func (p *Provider) calculateIPFromOffset(offset int) net.IP {
 		}
 	}
 	return ip
+}
+
+func (p *Provider) calculateIndexFromHwAddr(hwAddr net.HardwareAddr) int {
+	if len(hwAddr) == 6 && hwAddr[0] == 0x52 && hwAddr[1] == 0x54 && hwAddr[2] == 0x00 {
+		index := (int(hwAddr[3]) << 16) | (int(hwAddr[4]) << 8) | int(hwAddr[5])
+		if index >= 0 && index < len(p.allocatedIPs) {
+			return index
+		}
+	}
+
+	return -1
 }

@@ -10,6 +10,8 @@ type (
 	}
 
 	NetworkProvider interface {
+		GetInterface(name string) (*NetworkInterface, error)
+
 		AllocateInterface() (*NetworkInterface, error)
 
 		ReleaseInterface(name string) error
