@@ -2,7 +2,7 @@ package connecthandler
 
 import (
 	"github.com/baepo-app/baepo-node/pkg/initd/types"
-	"github.com/baepo-app/baepo-node/pkg/proto/v1/v1connect"
+	"github.com/baepo-app/baepo-node/pkg/proto/baepo/node/v1/v1connect"
 )
 
 type InitDServiceHandler struct {

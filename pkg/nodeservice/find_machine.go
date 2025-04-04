@@ -5,7 +5,7 @@ import (
 	"github.com/baepo-app/baepo-node/pkg/types"
 )
 
-func (s *Service) FindMachine(ctx context.Context, machineID string) (*types.NodeMachine, error) {
+func (s *Service) FindMachine(ctx context.Context, machineID string) (*types.Machine, error) {
 	machine, ok := s.machines[machineID]
 	if !ok {
 		return nil, types.ErrNodeMachineNotFound

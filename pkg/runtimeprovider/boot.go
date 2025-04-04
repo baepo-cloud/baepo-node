@@ -1,4 +1,4 @@
-package nodeservice
+package runtimeprovider
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"github.com/baepo-app/baepo-node/pkg/types"
 )
 
-func (s *Service) BootVM(ctx context.Context, machine *types.NodeMachine) error {
-	vmmClient, err := s.newCloudHypervisorHTTPClient(machine.MachineID)
+func (p *Provider) Boot(ctx context.Context, machine *types.Machine) error {
+	vmmClient, err := p.newCloudHypervisorHTTPClient(machine.ID)
 	if err != nil {
 		return fmt.Errorf("failed to create cloud hypervisor http client: %w", err)
 	}

@@ -1,4 +1,4 @@
-package nodeservice
+package runtimeprovider
 
 import (
 	"context"
@@ -10,9 +10,9 @@ import (
 	"time"
 )
 
-func (s *Service) CreateVMHypervisor(ctx context.Context, machineID string) (int, error) {
-	socketPath := s.getHypervisorSocketPath(machineID)
-	cmd := exec.Command(s.binaryPath, "--api-socket", socketPath)
+func (p *Provider) StartHypervisor(ctx context.Context, machineID string) (int, error) {
+	socketPath := p.getHypervisorSocketPath(machineID)
+	cmd := exec.Command(p.binaryPath, "--api-socket", socketPath)
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
 	}
@@ -20,7 +20,7 @@ func (s *Service) CreateVMHypervisor(ctx context.Context, machineID string) (int
 		return -1, fmt.Errorf("failed to start cloud hypervisor: %w", err)
 	}
 
-	vmmClient, err := s.newCloudHypervisorHTTPClient(machineID)
+	vmmClient, err := p.newCloudHypervisorHTTPClient(machineID)
 	if err != nil {
 		return -1, fmt.Errorf("failed to create cloud hypervisor http client: %w", err)
 	}

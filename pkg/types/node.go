@@ -2,67 +2,43 @@ package types
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
-	"net"
 )
 
 type (
-	Node struct {
-		ID              string            `json:"id"`
-		PublicIPAddress string            `json:"publicIpAddress"`
-		ServerEndpoint  string            `json:"serverEndpoint"`
-		VCpus           int               `json:"vCpus"`
-		Memory          int64             `json:"memory"`
-		Metadata        map[string]string `json:"metadata"`
-	}
-
-	NodeMachine struct {
-		MachineID        string
-		HypervisorPID    int
-		Spec             *NodeMachineSpec
-		Volume           *NodeVolume
-		NetworkInterface *NodeNetworkInterface
-	}
-
-	NodeMachineSpec struct {
-		Vcpus  int
-		Memory int64
-		Env    map[string]string
-	}
-
-	NodeVolume struct {
-		ID       string
-		Path     string
-		ReadOnly bool
-	}
-
-	NodeNetworkInterface struct {
-		Name       string
-		IPAddress  net.IP
-		MacAddress net.HardwareAddr
+	NodeServerConfig struct {
+		IPAddr           string
+		ServerAddr       string
+		GatewayAddr      string
+		StorageDirectory string
 	}
 
 	NodeStartMachineOptions struct {
 		MachineID string
-		Spec      NodeMachineSpec
+		Spec      MachineSpec
 	}
 
-	NodeRegisterNodeOptions struct {
-		PublicIPAddress string
-		ServerEndpoint  string
-		VCpus           int
-		Memory          int64
-		Metadata        map[string]string
-	}
+	NodeService interface {
+		Start(ctx context.Context) error
 
-	NodeRegistryService interface {
-		List(ctx context.Context) ([]*Node, error)
+		Stop(ctx context.Context) error
 
-		Register(ctx context.Context, opts NodeRegisterNodeOptions) (*Node, error)
+		AuthorityCertificate() *x509.Certificate
+
+		TLSCertificate() *tls.Certificate
+
+		FindMachine(ctx context.Context, machineID string) (*Machine, error)
+
+		HealthcheckMachine(ctx context.Context, machineID string) (*Machine, error)
+
+		StartMachine(ctx context.Context, opts NodeStartMachineOptions) (*Machine, error)
+
+		StopMachine(ctx context.Context, machineID string) (*Machine, error)
 	}
 )
 
 var (
-	ErrNoNodeAvailable     = errors.New("no node available")
 	ErrNodeMachineNotFound = errors.New("node machine not found")
 )

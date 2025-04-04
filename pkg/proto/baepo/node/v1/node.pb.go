@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        (unknown)
-// source: proto/v1/node.proto
+// source: proto/baepo/node/v1/node.proto
 
 package v1
 
@@ -58,11 +58,11 @@ func (x NodeMachineState) String() string {
 }
 
 func (NodeMachineState) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_v1_node_proto_enumTypes[0].Descriptor()
+	return file_proto_baepo_node_v1_node_proto_enumTypes[0].Descriptor()
 }
 
 func (NodeMachineState) Type() protoreflect.EnumType {
-	return &file_proto_v1_node_proto_enumTypes[0]
+	return &file_proto_baepo_node_v1_node_proto_enumTypes[0]
 }
 
 func (x NodeMachineState) Number() protoreflect.EnumNumber {
@@ -71,7 +71,7 @@ func (x NodeMachineState) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use NodeMachineState.Descriptor instead.
 func (NodeMachineState) EnumDescriptor() ([]byte, []int) {
-	return file_proto_v1_node_proto_rawDescGZIP(), []int{0}
+	return file_proto_baepo_node_v1_node_proto_rawDescGZIP(), []int{0}
 }
 
 type NodeStartMachineRequest struct {
@@ -86,7 +86,7 @@ type NodeStartMachineRequest struct {
 
 func (x *NodeStartMachineRequest) Reset() {
 	*x = NodeStartMachineRequest{}
-	mi := &file_proto_v1_node_proto_msgTypes[0]
+	mi := &file_proto_baepo_node_v1_node_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -98,7 +98,7 @@ func (x *NodeStartMachineRequest) String() string {
 func (*NodeStartMachineRequest) ProtoMessage() {}
 
 func (x *NodeStartMachineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_v1_node_proto_msgTypes[0]
+	mi := &file_proto_baepo_node_v1_node_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -111,7 +111,7 @@ func (x *NodeStartMachineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeStartMachineRequest.ProtoReflect.Descriptor instead.
 func (*NodeStartMachineRequest) Descriptor() ([]byte, []int) {
-	return file_proto_v1_node_proto_rawDescGZIP(), []int{0}
+	return file_proto_baepo_node_v1_node_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *NodeStartMachineRequest) GetMachineId() string {
@@ -151,7 +151,7 @@ type NodeStartMachineReply struct {
 
 func (x *NodeStartMachineReply) Reset() {
 	*x = NodeStartMachineReply{}
-	mi := &file_proto_v1_node_proto_msgTypes[1]
+	mi := &file_proto_baepo_node_v1_node_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -163,7 +163,7 @@ func (x *NodeStartMachineReply) String() string {
 func (*NodeStartMachineReply) ProtoMessage() {}
 
 func (x *NodeStartMachineReply) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_v1_node_proto_msgTypes[1]
+	mi := &file_proto_baepo_node_v1_node_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -176,7 +176,7 @@ func (x *NodeStartMachineReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeStartMachineReply.ProtoReflect.Descriptor instead.
 func (*NodeStartMachineReply) Descriptor() ([]byte, []int) {
-	return file_proto_v1_node_proto_rawDescGZIP(), []int{1}
+	return file_proto_baepo_node_v1_node_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *NodeStartMachineReply) GetMachine() *NodeMachine {
@@ -189,7 +189,7 @@ func (x *NodeStartMachineReply) GetMachine() *NodeMachine {
 type NodeMachine struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	MachineId     string                 `protobuf:"bytes,1,opt,name=machine_id,json=machineId,proto3" json:"machine_id,omitempty"`
-	State         NodeMachineState       `protobuf:"varint,2,opt,name=state,proto3,enum=v1.NodeMachineState" json:"state,omitempty"`
+	State         NodeMachineState       `protobuf:"varint,2,opt,name=state,proto3,enum=baepo.node.v1.NodeMachineState" json:"state,omitempty"`
 	Pid           int64                  `protobuf:"varint,3,opt,name=pid,proto3" json:"pid,omitempty"`
 	TapInterface  string                 `protobuf:"bytes,4,opt,name=tap_interface,json=tapInterface,proto3" json:"tap_interface,omitempty"`
 	MacAddress    string                 `protobuf:"bytes,5,opt,name=mac_address,json=macAddress,proto3" json:"mac_address,omitempty"`
@@ -200,7 +200,7 @@ type NodeMachine struct {
 
 func (x *NodeMachine) Reset() {
 	*x = NodeMachine{}
-	mi := &file_proto_v1_node_proto_msgTypes[2]
+	mi := &file_proto_baepo_node_v1_node_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -212,7 +212,7 @@ func (x *NodeMachine) String() string {
 func (*NodeMachine) ProtoMessage() {}
 
 func (x *NodeMachine) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_v1_node_proto_msgTypes[2]
+	mi := &file_proto_baepo_node_v1_node_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -225,7 +225,7 @@ func (x *NodeMachine) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeMachine.ProtoReflect.Descriptor instead.
 func (*NodeMachine) Descriptor() ([]byte, []int) {
-	return file_proto_v1_node_proto_rawDescGZIP(), []int{2}
+	return file_proto_baepo_node_v1_node_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *NodeMachine) GetMachineId() string {
@@ -279,7 +279,7 @@ type NodeStopMachineRequest struct {
 
 func (x *NodeStopMachineRequest) Reset() {
 	*x = NodeStopMachineRequest{}
-	mi := &file_proto_v1_node_proto_msgTypes[3]
+	mi := &file_proto_baepo_node_v1_node_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -291,7 +291,7 @@ func (x *NodeStopMachineRequest) String() string {
 func (*NodeStopMachineRequest) ProtoMessage() {}
 
 func (x *NodeStopMachineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_v1_node_proto_msgTypes[3]
+	mi := &file_proto_baepo_node_v1_node_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -304,7 +304,7 @@ func (x *NodeStopMachineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeStopMachineRequest.ProtoReflect.Descriptor instead.
 func (*NodeStopMachineRequest) Descriptor() ([]byte, []int) {
-	return file_proto_v1_node_proto_rawDescGZIP(), []int{3}
+	return file_proto_baepo_node_v1_node_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *NodeStopMachineRequest) GetMachineId() string {
@@ -323,7 +323,7 @@ type NodeHealthcheckMachineRequest struct {
 
 func (x *NodeHealthcheckMachineRequest) Reset() {
 	*x = NodeHealthcheckMachineRequest{}
-	mi := &file_proto_v1_node_proto_msgTypes[4]
+	mi := &file_proto_baepo_node_v1_node_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -335,7 +335,7 @@ func (x *NodeHealthcheckMachineRequest) String() string {
 func (*NodeHealthcheckMachineRequest) ProtoMessage() {}
 
 func (x *NodeHealthcheckMachineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_v1_node_proto_msgTypes[4]
+	mi := &file_proto_baepo_node_v1_node_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -348,7 +348,7 @@ func (x *NodeHealthcheckMachineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeHealthcheckMachineRequest.ProtoReflect.Descriptor instead.
 func (*NodeHealthcheckMachineRequest) Descriptor() ([]byte, []int) {
-	return file_proto_v1_node_proto_rawDescGZIP(), []int{4}
+	return file_proto_baepo_node_v1_node_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *NodeHealthcheckMachineRequest) GetMachineId() string {
@@ -367,7 +367,7 @@ type NodeHealthcheckMachineReply struct {
 
 func (x *NodeHealthcheckMachineReply) Reset() {
 	*x = NodeHealthcheckMachineReply{}
-	mi := &file_proto_v1_node_proto_msgTypes[5]
+	mi := &file_proto_baepo_node_v1_node_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -379,7 +379,7 @@ func (x *NodeHealthcheckMachineReply) String() string {
 func (*NodeHealthcheckMachineReply) ProtoMessage() {}
 
 func (x *NodeHealthcheckMachineReply) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_v1_node_proto_msgTypes[5]
+	mi := &file_proto_baepo_node_v1_node_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -392,7 +392,7 @@ func (x *NodeHealthcheckMachineReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeHealthcheckMachineReply.ProtoReflect.Descriptor instead.
 func (*NodeHealthcheckMachineReply) Descriptor() ([]byte, []int) {
-	return file_proto_v1_node_proto_rawDescGZIP(), []int{5}
+	return file_proto_baepo_node_v1_node_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *NodeHealthcheckMachineReply) GetMachine() *NodeMachine {
@@ -402,26 +402,26 @@ func (x *NodeHealthcheckMachineReply) GetMachine() *NodeMachine {
 	return nil
 }
 
-var File_proto_v1_node_proto protoreflect.FileDescriptor
+var File_proto_baepo_node_v1_node_proto protoreflect.FileDescriptor
 
-const file_proto_v1_node_proto_rawDesc = "" +
+const file_proto_baepo_node_v1_node_proto_rawDesc = "" +
 	"\n" +
-	"\x13proto/v1/node.proto\x12\x02v1\x1a\x1bgoogle/protobuf/empty.proto\"\xd7\x01\n" +
+	"\x1eproto/baepo/node/v1/node.proto\x12\rbaepo.node.v1\x1a\x1bgoogle/protobuf/empty.proto\"\xe2\x01\n" +
 	"\x17NodeStartMachineRequest\x12\x1d\n" +
 	"\n" +
 	"machine_id\x18\x01 \x01(\tR\tmachineId\x12\x15\n" +
 	"\x06v_cpus\x18\x02 \x01(\x05R\x05vCpus\x12\x16\n" +
-	"\x06memory\x18\x03 \x01(\x03R\x06memory\x126\n" +
-	"\x03env\x18\x04 \x03(\v2$.v1.NodeStartMachineRequest.EnvEntryR\x03env\x1a6\n" +
+	"\x06memory\x18\x03 \x01(\x03R\x06memory\x12A\n" +
+	"\x03env\x18\x04 \x03(\v2/.baepo.node.v1.NodeStartMachineRequest.EnvEntryR\x03env\x1a6\n" +
 	"\bEnvEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"B\n" +
-	"\x15NodeStartMachineReply\x12)\n" +
-	"\amachine\x18\x01 \x01(\v2\x0f.v1.NodeMachineR\amachine\"\xcf\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"M\n" +
+	"\x15NodeStartMachineReply\x124\n" +
+	"\amachine\x18\x01 \x01(\v2\x1a.baepo.node.v1.NodeMachineR\amachine\"\xda\x01\n" +
 	"\vNodeMachine\x12\x1d\n" +
 	"\n" +
-	"machine_id\x18\x01 \x01(\tR\tmachineId\x12*\n" +
-	"\x05state\x18\x02 \x01(\x0e2\x14.v1.NodeMachineStateR\x05state\x12\x10\n" +
+	"machine_id\x18\x01 \x01(\tR\tmachineId\x125\n" +
+	"\x05state\x18\x02 \x01(\x0e2\x1f.baepo.node.v1.NodeMachineStateR\x05state\x12\x10\n" +
 	"\x03pid\x18\x03 \x01(\x03R\x03pid\x12#\n" +
 	"\rtap_interface\x18\x04 \x01(\tR\ftapInterface\x12\x1f\n" +
 	"\vmac_address\x18\x05 \x01(\tR\n" +
@@ -433,55 +433,55 @@ const file_proto_v1_node_proto_rawDesc = "" +
 	"machine_id\x18\x01 \x01(\tR\tmachineId\">\n" +
 	"\x1dNodeHealthcheckMachineRequest\x12\x1d\n" +
 	"\n" +
-	"machine_id\x18\x01 \x01(\tR\tmachineId\"H\n" +
-	"\x1bNodeHealthcheckMachineReply\x12)\n" +
-	"\amachine\x18\x01 \x01(\v2\x0f.v1.NodeMachineR\amachine*\x8a\x01\n" +
+	"machine_id\x18\x01 \x01(\tR\tmachineId\"S\n" +
+	"\x1bNodeHealthcheckMachineReply\x124\n" +
+	"\amachine\x18\x01 \x01(\v2\x1a.baepo.node.v1.NodeMachineR\amachine*\x8a\x01\n" +
 	"\x10NodeMachineState\x12\x1c\n" +
 	"\x18NodeMachineState_Unknown\x10\x00\x12\x1c\n" +
 	"\x18NodeMachineState_Running\x10\x01\x12\x1d\n" +
 	"\x19NodeMachineState_Degraded\x10\x02\x12\x1b\n" +
-	"\x17NodeMachineState_Failed\x10\x032\xf2\x01\n" +
-	"\vNodeService\x12F\n" +
-	"\fStartMachine\x12\x1b.v1.NodeStartMachineRequest\x1a\x19.v1.NodeStartMachineReply\x12A\n" +
-	"\vStopMachine\x12\x1a.v1.NodeStopMachineRequest\x1a\x16.google.protobuf.Empty\x12X\n" +
-	"\x12HealthcheckMachine\x12!.v1.NodeHealthcheckMachineRequest\x1a\x1f.v1.NodeHealthcheckMachineReplyB3Z1github.com/remicaumette/code-sandbox/pkg/proto/v1b\x06proto3"
+	"\x17NodeMachineState_Failed\x10\x032\xa9\x02\n" +
+	"\vNodeService\x12\\\n" +
+	"\fStartMachine\x12&.baepo.node.v1.NodeStartMachineRequest\x1a$.baepo.node.v1.NodeStartMachineReply\x12L\n" +
+	"\vStopMachine\x12%.baepo.node.v1.NodeStopMachineRequest\x1a\x16.google.protobuf.Empty\x12n\n" +
+	"\x12HealthcheckMachine\x12,.baepo.node.v1.NodeHealthcheckMachineRequest\x1a*.baepo.node.v1.NodeHealthcheckMachineReplyB9Z7github.com/baepo-app/baepo-node/pkg/proto/baepo/node/v1b\x06proto3"
 
 var (
-	file_proto_v1_node_proto_rawDescOnce sync.Once
-	file_proto_v1_node_proto_rawDescData []byte
+	file_proto_baepo_node_v1_node_proto_rawDescOnce sync.Once
+	file_proto_baepo_node_v1_node_proto_rawDescData []byte
 )
 
-func file_proto_v1_node_proto_rawDescGZIP() []byte {
-	file_proto_v1_node_proto_rawDescOnce.Do(func() {
-		file_proto_v1_node_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_v1_node_proto_rawDesc), len(file_proto_v1_node_proto_rawDesc)))
+func file_proto_baepo_node_v1_node_proto_rawDescGZIP() []byte {
+	file_proto_baepo_node_v1_node_proto_rawDescOnce.Do(func() {
+		file_proto_baepo_node_v1_node_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_baepo_node_v1_node_proto_rawDesc), len(file_proto_baepo_node_v1_node_proto_rawDesc)))
 	})
-	return file_proto_v1_node_proto_rawDescData
+	return file_proto_baepo_node_v1_node_proto_rawDescData
 }
 
-var file_proto_v1_node_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_proto_v1_node_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
-var file_proto_v1_node_proto_goTypes = []any{
-	(NodeMachineState)(0),                 // 0: v1.NodeMachineState
-	(*NodeStartMachineRequest)(nil),       // 1: v1.NodeStartMachineRequest
-	(*NodeStartMachineReply)(nil),         // 2: v1.NodeStartMachineReply
-	(*NodeMachine)(nil),                   // 3: v1.NodeMachine
-	(*NodeStopMachineRequest)(nil),        // 4: v1.NodeStopMachineRequest
-	(*NodeHealthcheckMachineRequest)(nil), // 5: v1.NodeHealthcheckMachineRequest
-	(*NodeHealthcheckMachineReply)(nil),   // 6: v1.NodeHealthcheckMachineReply
-	nil,                                   // 7: v1.NodeStartMachineRequest.EnvEntry
+var file_proto_baepo_node_v1_node_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_proto_baepo_node_v1_node_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_proto_baepo_node_v1_node_proto_goTypes = []any{
+	(NodeMachineState)(0),                 // 0: baepo.node.v1.NodeMachineState
+	(*NodeStartMachineRequest)(nil),       // 1: baepo.node.v1.NodeStartMachineRequest
+	(*NodeStartMachineReply)(nil),         // 2: baepo.node.v1.NodeStartMachineReply
+	(*NodeMachine)(nil),                   // 3: baepo.node.v1.NodeMachine
+	(*NodeStopMachineRequest)(nil),        // 4: baepo.node.v1.NodeStopMachineRequest
+	(*NodeHealthcheckMachineRequest)(nil), // 5: baepo.node.v1.NodeHealthcheckMachineRequest
+	(*NodeHealthcheckMachineReply)(nil),   // 6: baepo.node.v1.NodeHealthcheckMachineReply
+	nil,                                   // 7: baepo.node.v1.NodeStartMachineRequest.EnvEntry
 	(*emptypb.Empty)(nil),                 // 8: google.protobuf.Empty
 }
-var file_proto_v1_node_proto_depIdxs = []int32{
-	7, // 0: v1.NodeStartMachineRequest.env:type_name -> v1.NodeStartMachineRequest.EnvEntry
-	3, // 1: v1.NodeStartMachineReply.machine:type_name -> v1.NodeMachine
-	0, // 2: v1.NodeMachine.state:type_name -> v1.NodeMachineState
-	3, // 3: v1.NodeHealthcheckMachineReply.machine:type_name -> v1.NodeMachine
-	1, // 4: v1.NodeService.StartMachine:input_type -> v1.NodeStartMachineRequest
-	4, // 5: v1.NodeService.StopMachine:input_type -> v1.NodeStopMachineRequest
-	5, // 6: v1.NodeService.HealthcheckMachine:input_type -> v1.NodeHealthcheckMachineRequest
-	2, // 7: v1.NodeService.StartMachine:output_type -> v1.NodeStartMachineReply
-	8, // 8: v1.NodeService.StopMachine:output_type -> google.protobuf.Empty
-	6, // 9: v1.NodeService.HealthcheckMachine:output_type -> v1.NodeHealthcheckMachineReply
+var file_proto_baepo_node_v1_node_proto_depIdxs = []int32{
+	7, // 0: baepo.node.v1.NodeStartMachineRequest.env:type_name -> baepo.node.v1.NodeStartMachineRequest.EnvEntry
+	3, // 1: baepo.node.v1.NodeStartMachineReply.machine:type_name -> baepo.node.v1.NodeMachine
+	0, // 2: baepo.node.v1.NodeMachine.state:type_name -> baepo.node.v1.NodeMachineState
+	3, // 3: baepo.node.v1.NodeHealthcheckMachineReply.machine:type_name -> baepo.node.v1.NodeMachine
+	1, // 4: baepo.node.v1.NodeService.StartMachine:input_type -> baepo.node.v1.NodeStartMachineRequest
+	4, // 5: baepo.node.v1.NodeService.StopMachine:input_type -> baepo.node.v1.NodeStopMachineRequest
+	5, // 6: baepo.node.v1.NodeService.HealthcheckMachine:input_type -> baepo.node.v1.NodeHealthcheckMachineRequest
+	2, // 7: baepo.node.v1.NodeService.StartMachine:output_type -> baepo.node.v1.NodeStartMachineReply
+	8, // 8: baepo.node.v1.NodeService.StopMachine:output_type -> google.protobuf.Empty
+	6, // 9: baepo.node.v1.NodeService.HealthcheckMachine:output_type -> baepo.node.v1.NodeHealthcheckMachineReply
 	7, // [7:10] is the sub-list for method output_type
 	4, // [4:7] is the sub-list for method input_type
 	4, // [4:4] is the sub-list for extension type_name
@@ -489,27 +489,27 @@ var file_proto_v1_node_proto_depIdxs = []int32{
 	0, // [0:4] is the sub-list for field type_name
 }
 
-func init() { file_proto_v1_node_proto_init() }
-func file_proto_v1_node_proto_init() {
-	if File_proto_v1_node_proto != nil {
+func init() { file_proto_baepo_node_v1_node_proto_init() }
+func file_proto_baepo_node_v1_node_proto_init() {
+	if File_proto_baepo_node_v1_node_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_v1_node_proto_rawDesc), len(file_proto_v1_node_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_baepo_node_v1_node_proto_rawDesc), len(file_proto_baepo_node_v1_node_proto_rawDesc)),
 			NumEnums:      1,
 			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_proto_v1_node_proto_goTypes,
-		DependencyIndexes: file_proto_v1_node_proto_depIdxs,
-		EnumInfos:         file_proto_v1_node_proto_enumTypes,
-		MessageInfos:      file_proto_v1_node_proto_msgTypes,
+		GoTypes:           file_proto_baepo_node_v1_node_proto_goTypes,
+		DependencyIndexes: file_proto_baepo_node_v1_node_proto_depIdxs,
+		EnumInfos:         file_proto_baepo_node_v1_node_proto_enumTypes,
+		MessageInfos:      file_proto_baepo_node_v1_node_proto_msgTypes,
 	}.Build()
-	File_proto_v1_node_proto = out.File
-	file_proto_v1_node_proto_goTypes = nil
-	file_proto_v1_node_proto_depIdxs = nil
+	File_proto_baepo_node_v1_node_proto = out.File
+	file_proto_baepo_node_v1_node_proto_goTypes = nil
+	file_proto_baepo_node_v1_node_proto_depIdxs = nil
 }

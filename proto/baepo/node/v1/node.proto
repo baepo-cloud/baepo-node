@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-package v1;
+package baepo.node.v1;
 
 import "google/protobuf/empty.proto";
 
-option go_package = "github.com/baepo-app/baepo-node/pkg/proto/v1";
+option go_package = "github.com/baepo-app/baepo-node/pkg/proto/baepo/node/v1";
 
 service NodeService {
   rpc StartMachine(NodeStartMachineRequest) returns (NodeStartMachineReply);

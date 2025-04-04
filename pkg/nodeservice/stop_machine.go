@@ -6,14 +6,16 @@ import (
 	"log/slog"
 )
 
-func (s *Service) StopMachine(ctx context.Context, machineID string) (*types.NodeMachine, error) {
+func (s *Service) StopMachine(ctx context.Context, machineID string) (*types.Machine, error) {
 	machine, err := s.FindMachine(ctx, machineID)
 	if err != nil {
 		return nil, err
 	}
 
-	if machine.HypervisorPID > 0 {
-		err = s.TerminateVM(ctx, machine)
+	slog.Info("stopping machine", slog.String("machine-id", machineID))
+	
+	if machine.RuntimePID > 0 {
+		err = s.runtimeProvider.Terminate(ctx, machine)
 		if err != nil {
 			slog.Error("failed to terminate machine",
 				slog.String("machine-id", machineID),
@@ -22,7 +24,7 @@ func (s *Service) StopMachine(ctx context.Context, machineID string) (*types.Nod
 	}
 
 	if machine.NetworkInterface != nil {
-		err = s.ReleaseNetwork(ctx, machine.NetworkInterface.Name)
+		err = s.networkProvider.ReleaseInterface(machine.NetworkInterface.Name)
 		if err != nil {
 			slog.Error("failed to release machine network",
 				slog.String("machine-id", machineID),
@@ -31,7 +33,7 @@ func (s *Service) StopMachine(ctx context.Context, machineID string) (*types.Nod
 	}
 
 	if machine.Volume != nil {
-		_ = s.DeleteVolume(ctx, machine.Volume)
+		_ = s.volumeProvider.DeleteVolume(ctx, machine.Volume)
 		if err != nil {
 			slog.Error("failed to delete machine volume",
 				slog.String("machine-id", machineID),

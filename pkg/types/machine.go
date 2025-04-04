@@ -3,73 +3,32 @@ package types
 import (
 	"context"
 	"errors"
-	"time"
 )
 
 type (
-	MachineCreateOptions struct {
-		Name     *string
-		Vcpus    int
-		Memory   int64
-		Timeout  *int
-		Metadata map[string]string
-		Env      map[string]string
-	}
-
 	MachineState string
 
 	Machine struct {
-		ID                string
-		Name              *string
-		State             MachineState
-		NodeID            *string
-		Vcpus             int
-		Memory            int64
-		Timeout           *int
-		StartedAt         *time.Time
-		ExpiresAt         *time.Time
-		TerminatedAt      *time.Time
-		TerminationReason *string
-		Metadata          MapStringString
-		Env               MapStringString
-		CreatedAt         time.Time
-		UpdatedAt         time.Time
+		ID               string
+		State            MachineState
+		RuntimePID       int
+		Spec             *MachineSpec
+		Volume           *Volume
+		NetworkInterface *NetworkInterface
 	}
 
-	MachineRuntime struct {
-		MachineID    string
-		State        MachineState
-		NodeID       string
-		PID          *int
-		TapInterface *string
-		MacAddress   *string
-		IPAddress    *string
+	MachineSpec struct {
+		Vcpus  int
+		Memory int64
+		Env    map[string]string
 	}
 
-	MachineStore interface {
-		FindMachineByID(ctx context.Context, id string) (*Machine, error)
+	RuntimeProvider interface {
+		Create(ctx context.Context, machine *Machine) (int, error)
 
-		CreateMachine(ctx context.Context, machine *Machine) error
+		Boot(ctx context.Context, machine *Machine) error
 
-		UpdateMachine(ctx context.Context, machine *Machine) error
-
-		UpdateMachineState(ctx context.Context, machineID string, state MachineState) error
-
-		EtcdMachineRuntimeBasePrefix() string
-
-		EtcdMachineRuntimePrefix(machineID string) string
-
-		SaveMachineRuntime(ctx context.Context, runtime *MachineRuntime) error
-
-		FindMachineRuntime(ctx context.Context, machineID string) (*MachineRuntime, error)
-
-		DeleteMachineRuntime(ctx context.Context, runtime *MachineRuntime) error
-	}
-
-	MachineService interface {
-		Create(ctx context.Context, opts MachineCreateOptions) (*Machine, error)
-
-		RequestTermination(ctx context.Context, machineID string) error
+		Terminate(ctx context.Context, machine *Machine) error
 	}
 )
 
@@ -82,6 +41,5 @@ const (
 )
 
 var (
-	ErrMachineNotFound        = errors.New("machine not found")
-	ErrMachineRuntimeNotFound = errors.New("machine runtime not found")
+	ErrMachineNotFound = errors.New("machine not found")
 )

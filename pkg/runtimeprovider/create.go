@@ -1,4 +1,4 @@
-package nodeservice
+package runtimeprovider
 
 import (
 	"context"
@@ -8,10 +8,15 @@ import (
 	"github.com/baepo-app/baepo-node/pkg/typeutil"
 )
 
-func (s *Service) CreateVM(ctx context.Context, machine *types.NodeMachine) error {
-	vmmClient, err := s.newCloudHypervisorHTTPClient(machine.MachineID)
+func (p *Provider) Create(ctx context.Context, machine *types.Machine) (int, error) {
+	pid, err := p.StartHypervisor(ctx, machine.ID)
 	if err != nil {
-		return fmt.Errorf("failed to create cloud hypervisor http client: %w", err)
+		return -1, err
+	}
+
+	vmmClient, err := p.newCloudHypervisorHTTPClient(machine.ID)
+	if err != nil {
+		return -1, fmt.Errorf("failed to create cloud hypervisor http client: %w", err)
 	}
 
 	_, err = vmmClient.CreateVM(ctx, chclient.VmConfig{
@@ -41,15 +46,15 @@ func (s *Service) CreateVM(ctx context.Context, machine *types.NodeMachine) erro
 		},
 		Vsock: &chclient.VsockConfig{
 			Cid:    3,
-			Socket: s.getInitDaemonSocketPath(machine.MachineID),
+			Socket: p.getInitDaemonSocketPath(machine.ID),
 		},
 		Console: &chclient.ConsoleConfig{
 			Mode: chclient.ConsoleConfigModeFile,
-			File: typeutil.Ptr(s.getHypervisorLogPath(machine.MachineID)),
+			File: typeutil.Ptr(p.getHypervisorLogPath(machine.ID)),
 		},
 		Payload: chclient.PayloadConfig{
-			Kernel:    typeutil.Ptr(s.vmLinuxPath),
-			Initramfs: typeutil.Ptr(s.initRamFSPath),
+			Kernel:    typeutil.Ptr(p.vmLinuxPath),
+			Initramfs: typeutil.Ptr(p.initRamFSPath),
 			Cmdline: typeutil.Ptr(fmt.Sprintf(
 				"console=ttyS0 console=hvc0 root=/dev/vda rw rdinit=/sbin/init -- %v/24 %v", // todo: pass mask
 				machine.NetworkInterface.IPAddress.String(),
@@ -61,8 +66,8 @@ func (s *Service) CreateVM(ctx context.Context, machine *types.NodeMachine) erro
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create vm: %v", err)
+		return -1, fmt.Errorf("failed to create vm: %v", err)
 	}
 
-	return nil
+	return pid, nil
 }

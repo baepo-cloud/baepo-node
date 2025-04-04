@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/baepo-app/baepo-node/pkg/initd/connecthandler"
-	"github.com/baepo-app/baepo-node/pkg/proto/v1/v1connect"
+	"github.com/baepo-app/baepo-node/pkg/proto/baepo/node/v1/v1connect"
 	"github.com/baepo-app/baepo-node/pkg/vsock"
 	"net/http"
 )

@@ -1,70 +1,75 @@
 package nodeservice
 
 import (
-	"connectrpc.com/connect"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
-	"github.com/baepo-app/baepo-node/pkg/chclient"
-	v1pb "github.com/baepo-app/baepo-node/pkg/proto/v1"
-	"github.com/baepo-app/baepo-node/pkg/proto/v1/v1connect"
 	"github.com/baepo-app/baepo-node/pkg/types"
+	v1pb "github.com/baepo-app/baepo-oss/pkg/proto/baepo/api/v1"
+	"github.com/baepo-app/baepo-oss/pkg/proto/baepo/api/v1/v1connect"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"log/slog"
 	"net"
-	"net/http"
-	"path"
 	"sync"
 	"time"
 )
 
 type Service struct {
-	nodeRegistryClient v1connect.NodeRegistryServiceClient
-	binaryPath         string
-	socketDirectory    string
-	vmLinuxPath        string
-	initRamFSPath      string
-	volumeGroup        string
-	baseVolume         string
-	lock               *sync.Mutex
-	networkAllocator   *networkAllocator
-	machines           map[string]*types.NodeMachine
+	apiClient         v1connect.NodeServiceClient
+	volumeProvider    types.VolumeProvider
+	networkProvider   types.NetworkProvider
+	runtimeProvider   types.RuntimeProvider
+	config            types.NodeServerConfig
+	authorityCert     *x509.Certificate
+	tlsCert           *tls.Certificate
+	lock              *sync.Mutex
+	cancelRegisterCtx func()
+	machines          map[string]*types.Machine
 }
 
-func New(apiEndpoint, binaryPath, socketDirectory, vmLinuxPath, initRamFSPath, volumeGroup, baseVolume string) (*Service, error) {
-	netAllocator, err := newNetworkAllocator()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create network allocator: %w", err)
-	}
+var _ types.NodeService = (*Service)(nil)
 
+func New(
+	apiClient v1connect.NodeServiceClient,
+	volumeProvider types.VolumeProvider,
+	networkProvider types.NetworkProvider,
+	runtimeProvider types.RuntimeProvider,
+	config types.NodeServerConfig,
+) *Service {
 	return &Service{
-		nodeRegistryClient: v1connect.NewNodeRegistryServiceClient(http.DefaultClient, apiEndpoint),
-		binaryPath:         binaryPath,
-		socketDirectory:    socketDirectory,
-		vmLinuxPath:        vmLinuxPath,
-		initRamFSPath:      initRamFSPath,
-		volumeGroup:        volumeGroup,
-		baseVolume:         baseVolume,
-		lock:               &sync.Mutex{},
-		networkAllocator:   netAllocator,
-		machines:           map[string]*types.NodeMachine{},
-	}, nil
+		apiClient:       apiClient,
+		volumeProvider:  volumeProvider,
+		networkProvider: networkProvider,
+		runtimeProvider: runtimeProvider,
+		config:          config,
+		lock:            &sync.Mutex{},
+		machines:        map[string]*types.Machine{},
+	}
 }
 
 func (s *Service) Start(ctx context.Context) error {
+	slog.Info("registering node...")
+
+	registerCtx, cancelRegisterCtx := context.WithCancel(context.Background())
+	s.cancelRegisterCtx = cancelRegisterCtx
 	go func() {
 		for {
-			res, err := s.nodeRegistryClient.Register(context.Background(), connect.NewRequest(&v1pb.NodeRegistryRegisterRequest{
-				PublicIpAddress: "localhost",
-				VCpus:           4,
-				Memory:          2,
-				ServerEndpoint:  "http://localhost:3300",
-			}))
-			if err != nil {
-				slog.Error("failed to register node, retrying in 5 seconds...", slog.Any("error", err))
-				time.Sleep(5 * time.Second)
-				continue
-			}
-
-			for res.Receive() {
+			select {
+			case <-registerCtx.Done():
+				return
+			default:
+				err := s.registerNode(registerCtx)
+				if err != nil {
+					slog.Error("failed to register node, retrying in 5 seconds...", slog.Any("error", err))
+					select {
+					case <-time.After(5 * time.Second):
+						continue
+					case <-registerCtx.Done():
+						return
+					}
+				}
 			}
 		}
 	}()
@@ -72,25 +77,99 @@ func (s *Service) Start(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) newCloudHypervisorHTTPClient(machineID string) (*chclient.ClientWithResponses, error) {
-	client := &http.Client{
-		Transport: &http.Transport{
-			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("unix", s.getHypervisorSocketPath(machineID))
+func (s *Service) Stop(ctx context.Context) error {
+	s.cancelRegisterCtx()
+	return nil
+}
+
+func (s *Service) registerNode(ctx context.Context) error {
+	slog.Info("starting node registration...")
+	stream := s.apiClient.Connect(ctx)
+
+	err := stream.Send(&v1pb.NodeConnectClientEvent{
+		Event: &v1pb.NodeConnectClientEvent_Register{
+			Register: &v1pb.NodeConnectClientEvent_RegisterRequest{
+				ClusterId:       "llllll",
+				BootstrapToken:  "",
+				ServerEndpoint:  s.getEndpoint(s.config.ServerAddr),
+				GatewayEndpoint: s.getEndpoint(s.config.GatewayAddr),
+				IpAddress:       s.config.IPAddr,
 			},
 		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to send registration request: %w", err)
 	}
-	return chclient.NewClientWithResponses("http://localhost/api/v1", chclient.WithHTTPClient(client))
+
+	event, err := stream.Receive()
+	if err != nil {
+		return fmt.Errorf("failed to receive registration response: %w", err)
+	}
+
+	registrationResponse, ok := event.Event.(*v1pb.NodeConnectServerEvent_Register)
+	if !ok {
+		return fmt.Errorf("received registration response is not valid: %v", event.Event)
+	}
+
+	s.authorityCert, err = parseCertificate(registrationResponse.Register.AuthorityCert)
+	if err != nil {
+		return fmt.Errorf("failed to parse authority certificate: %w", err)
+	}
+
+	tlsCert, err := tls.X509KeyPair(registrationResponse.Register.ServerCert, registrationResponse.Register.ServerKey)
+	if err != nil {
+		return fmt.Errorf("failed to load server tls certificate: %w", err)
+	}
+	s.tlsCert = &tlsCert
+
+	slog.Info("node registration completed", slog.String("node-id", registrationResponse.Register.NodeId))
+
+	pingTicker := time.NewTicker(30 * time.Second)
+	defer pingTicker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-pingTicker.C:
+			err = stream.Send(&v1pb.NodeConnectClientEvent{
+				Event: &v1pb.NodeConnectClientEvent_Ping{
+					Ping: &emptypb.Empty{},
+				},
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
 }
 
-func (s *Service) getHypervisorSocketPath(machineID string) string {
-	return path.Join(s.socketDirectory, fmt.Sprintf("%v.socket", machineID))
+func (s *Service) AuthorityCertificate() *x509.Certificate {
+	return s.authorityCert
 }
 
-func (s *Service) getHypervisorLogPath(machineID string) string {
-	return path.Join(s.socketDirectory, fmt.Sprintf("%v.log", machineID))
+func (s *Service) TLSCertificate() *tls.Certificate {
+	return s.tlsCert
 }
 
-func (s *Service) getInitDaemonSocketPath(machineID string) string {
-	return path.Join(s.socketDirectory, fmt.Sprintf("%v_initd.socket", machineID))
+func (s *Service) getEndpoint(addr string) string {
+	host, port, _ := net.SplitHostPort(addr)
+	if host == "" {
+		host = s.config.IPAddr
+	}
+	return net.JoinHostPort(host, port)
+}
+
+func parseCertificate(value []byte) (*x509.Certificate, error) {
+	block, _ := pem.Decode(value)
+	if block == nil || block.Type != "CA CERTIFICATE" {
+		return nil, fmt.Errorf("failed to decode PEM block containing certificate")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse CA certificate: %w", err)
+	}
+
+	return cert, nil
 }
