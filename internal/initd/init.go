@@ -2,7 +2,7 @@ package initd
 
 import (
 	"fmt"
-	"github.com/baepo-app/baepo-node/internal/initd/types"
+	"github.com/baepo-cloud/baepo-node/internal/initd/types"
 	"github.com/vishvananda/netlink"
 	"log/slog"
 	"net"

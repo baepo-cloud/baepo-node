@@ -78,7 +78,7 @@ type NodeStartMachineRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	MachineId     string                 `protobuf:"bytes,1,opt,name=machine_id,json=machineId,proto3" json:"machine_id,omitempty"`
 	VCpus         int32                  `protobuf:"varint,2,opt,name=v_cpus,json=vCpus,proto3" json:"v_cpus,omitempty"`
-	Memory        int64                  `protobuf:"varint,3,opt,name=memory,proto3" json:"memory,omitempty"`
+	MemoryMb      int64                  `protobuf:"varint,3,opt,name=memory_mb,json=memoryMb,proto3" json:"memory_mb,omitempty"`
 	Env           map[string]string      `protobuf:"bytes,4,rep,name=env,proto3" json:"env,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -128,9 +128,9 @@ func (x *NodeStartMachineRequest) GetVCpus() int32 {
 	return 0
 }
 
-func (x *NodeStartMachineRequest) GetMemory() int64 {
+func (x *NodeStartMachineRequest) GetMemoryMb() int64 {
 	if x != nil {
-		return x.Memory
+		return x.MemoryMb
 	}
 	return 0
 }
@@ -406,12 +406,12 @@ var File_proto_baepo_node_v1_node_proto protoreflect.FileDescriptor
 
 const file_proto_baepo_node_v1_node_proto_rawDesc = "" +
 	"\n" +
-	"\x1eproto/baepo/node/v1/node.proto\x12\rbaepo.node.v1\x1a\x1bgoogle/protobuf/empty.proto\"\xe2\x01\n" +
+	"\x1eproto/baepo/node/v1/node.proto\x12\rbaepo.node.v1\x1a\x1bgoogle/protobuf/empty.proto\"\xe7\x01\n" +
 	"\x17NodeStartMachineRequest\x12\x1d\n" +
 	"\n" +
 	"machine_id\x18\x01 \x01(\tR\tmachineId\x12\x15\n" +
-	"\x06v_cpus\x18\x02 \x01(\x05R\x05vCpus\x12\x16\n" +
-	"\x06memory\x18\x03 \x01(\x03R\x06memory\x12A\n" +
+	"\x06v_cpus\x18\x02 \x01(\x05R\x05vCpus\x12\x1b\n" +
+	"\tmemory_mb\x18\x03 \x01(\x03R\bmemoryMb\x12A\n" +
 	"\x03env\x18\x04 \x03(\v2/.baepo.node.v1.NodeStartMachineRequest.EnvEntryR\x03env\x1a6\n" +
 	"\bEnvEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
@@ -444,7 +444,7 @@ const file_proto_baepo_node_v1_node_proto_rawDesc = "" +
 	"\vNodeService\x12\\\n" +
 	"\fStartMachine\x12&.baepo.node.v1.NodeStartMachineRequest\x1a$.baepo.node.v1.NodeStartMachineReply\x12L\n" +
 	"\vStopMachine\x12%.baepo.node.v1.NodeStopMachineRequest\x1a\x16.google.protobuf.Empty\x12n\n" +
-	"\x12HealthcheckMachine\x12,.baepo.node.v1.NodeHealthcheckMachineRequest\x1a*.baepo.node.v1.NodeHealthcheckMachineReplyB9Z7github.com/baepo-app/baepo-node/pkg/proto/baepo/node/v1b\x06proto3"
+	"\x12HealthcheckMachine\x12,.baepo.node.v1.NodeHealthcheckMachineRequest\x1a*.baepo.node.v1.NodeHealthcheckMachineReplyB@Z>github.com/baepo-cloud/baepo-node/internal/proto/baepo/node/v1b\x06proto3"
 
 var (
 	file_proto_baepo_node_v1_node_proto_rawDescOnce sync.Once

@@ -1,4 +1,4 @@
-module github.com/baepo-app/baepo-node
+module github.com/baepo-cloud/baepo-node
 
 go 1.24.1
 

@@ -3,17 +3,17 @@ package apiserver
 import (
 	"connectrpc.com/connect"
 	"context"
-	v1pb "github.com/baepo-app/baepo-node/internal/proto/baepo/node/v1"
-	"github.com/baepo-app/baepo-node/internal/types"
+	v1pb "github.com/baepo-cloud/baepo-node/internal/proto/baepo/node/v1"
+	"github.com/baepo-cloud/baepo-node/internal/types"
 )
 
 func (s *Server) StartMachine(ctx context.Context, req *connect.Request[v1pb.NodeStartMachineRequest]) (*connect.Response[v1pb.NodeStartMachineReply], error) {
 	machine, err := s.service.StartMachine(ctx, types.NodeStartMachineOptions{
 		MachineID: req.Msg.MachineId,
 		Spec: types.MachineSpec{
-			Vcpus:  int(req.Msg.VCpus),
-			Memory: req.Msg.Memory,
-			Env:    req.Msg.Env,
+			Vcpus:    int(req.Msg.VCpus),
+			MemoryMB: req.Msg.MemoryMb,
+			Env:      req.Msg.Env,
 		},
 	})
 	if err != nil {

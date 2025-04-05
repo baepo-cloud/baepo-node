@@ -4,7 +4,7 @@ package baepo.node.v1;
 
 import "google/protobuf/empty.proto";
 
-option go_package = "github.com/baepo-app/baepo-node/pkg/proto/baepo/node/v1";
+option go_package = "github.com/baepo-cloud/baepo-node/internal/proto/baepo/node/v1";
 
 service NodeService {
   rpc StartMachine(NodeStartMachineRequest) returns (NodeStartMachineReply);
@@ -17,7 +17,7 @@ service NodeService {
 message NodeStartMachineRequest {
   string machine_id = 1;
   int32 v_cpus = 2;
-  int64 memory = 3;
+  int64 memory_mb = 3;
   map<string, string> env = 4;
 }
 

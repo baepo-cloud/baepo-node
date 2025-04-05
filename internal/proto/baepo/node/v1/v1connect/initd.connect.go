@@ -8,7 +8,7 @@ import (
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	v1 "github.com/baepo-app/baepo-node/internal/proto/baepo/node/v1"
+	v1 "github.com/baepo-cloud/baepo-node/internal/proto/baepo/node/v1"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
 	strings "strings"

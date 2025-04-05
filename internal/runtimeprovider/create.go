@@ -3,9 +3,9 @@ package runtimeprovider
 import (
 	"context"
 	"fmt"
-	"github.com/baepo-app/baepo-node/internal/chclient"
-	"github.com/baepo-app/baepo-node/internal/types"
-	"github.com/baepo-app/baepo-node/internal/typeutil"
+	"github.com/baepo-cloud/baepo-node/internal/chclient"
+	"github.com/baepo-cloud/baepo-node/internal/types"
+	"github.com/baepo-cloud/baepo-node/internal/typeutil"
 )
 
 func (p *Provider) Create(ctx context.Context, machine *types.Machine) (int, error) {
@@ -25,7 +25,7 @@ func (p *Provider) Create(ctx context.Context, machine *types.Machine) (int, err
 			MaxVcpus:  machine.Spec.Vcpus,
 		},
 		Memory: &chclient.MemoryConfig{
-			Size: machine.Spec.Memory * 1024 * 1024, // convert Mib to bytes
+			Size: machine.Spec.MemoryMB * 1024 * 1024, // convert Mib to bytes
 		},
 		Disks: &[]chclient.DiskConfig{
 			{

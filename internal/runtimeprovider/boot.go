@@ -3,7 +3,7 @@ package runtimeprovider
 import (
 	"context"
 	"fmt"
-	"github.com/baepo-app/baepo-node/internal/types"
+	"github.com/baepo-cloud/baepo-node/internal/types"
 )
 
 func (p *Provider) Boot(ctx context.Context, machine *types.Machine) error {

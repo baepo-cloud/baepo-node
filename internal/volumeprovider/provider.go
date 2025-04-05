@@ -3,7 +3,7 @@ package volumeprovider
 import (
 	"context"
 	"fmt"
-	"github.com/baepo-app/baepo-node/internal/types"
+	"github.com/baepo-cloud/baepo-node/internal/types"
 	"github.com/nrednav/cuid2"
 	"os/exec"
 )

@@ -2,7 +2,7 @@ package networkprovider
 
 import (
 	"fmt"
-	"github.com/baepo-app/baepo-node/internal/types"
+	"github.com/baepo-cloud/baepo-node/internal/types"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 	"net"

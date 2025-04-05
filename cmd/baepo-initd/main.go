@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/baepo-app/baepo-node/internal/initd"
+	"github.com/baepo-cloud/baepo-node/internal/initd"
 	"github.com/vishvananda/netlink"
 	"net"
 	"os"

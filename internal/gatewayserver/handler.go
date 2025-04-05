@@ -2,7 +2,7 @@ package gatewayserver
 
 import (
 	"errors"
-	"github.com/baepo-app/baepo-node/internal/types"
+	"github.com/baepo-cloud/baepo-node/internal/types"
 	"net"
 	"net/http"
 	"net/http/httputil"

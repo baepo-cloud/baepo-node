@@ -1,7 +1,7 @@
 package networkprovider
 
 import (
-	"github.com/baepo-app/baepo-node/internal/types"
+	"github.com/baepo-cloud/baepo-node/internal/types"
 	"github.com/vishvananda/netlink"
 )
 

@@ -3,7 +3,7 @@ package apiserver
 import (
 	"connectrpc.com/connect"
 	"context"
-	v1pb "github.com/baepo-app/baepo-node/internal/proto/baepo/node/v1"
+	v1pb "github.com/baepo-cloud/baepo-node/internal/proto/baepo/node/v1"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 

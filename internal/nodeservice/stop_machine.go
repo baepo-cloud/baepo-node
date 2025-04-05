@@ -2,7 +2,7 @@ package nodeservice
 
 import (
 	"context"
-	"github.com/baepo-app/baepo-node/internal/types"
+	"github.com/baepo-cloud/baepo-node/internal/types"
 	"log/slog"
 )
 

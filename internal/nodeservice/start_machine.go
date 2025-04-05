@@ -3,7 +3,7 @@ package nodeservice
 import (
 	"context"
 	"fmt"
-	"github.com/baepo-app/baepo-node/internal/types"
+	"github.com/baepo-cloud/baepo-node/internal/types"
 	"log/slog"
 )
 
@@ -12,9 +12,9 @@ func (s *Service) StartMachine(ctx context.Context, opts types.NodeStartMachineO
 	machine := &types.Machine{
 		ID: opts.MachineID,
 		Spec: &types.MachineSpec{
-			Vcpus:  opts.Spec.Vcpus,
-			Memory: opts.Spec.Memory,
-			Env:    opts.Spec.Env,
+			Vcpus:    opts.Spec.Vcpus,
+			MemoryMB: opts.Spec.MemoryMB,
+			Env:      opts.Spec.Env,
 		},
 	}
 

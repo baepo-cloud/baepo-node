@@ -3,8 +3,8 @@ package runtimeprovider
 import (
 	"context"
 	"fmt"
-	"github.com/baepo-app/baepo-node/internal/chclient"
-	"github.com/baepo-app/baepo-node/internal/types"
+	"github.com/baepo-cloud/baepo-node/internal/chclient"
+	"github.com/baepo-cloud/baepo-node/internal/types"
 	"log/slog"
 	"net"
 	"os"
@@ -101,7 +101,7 @@ func (p *Provider) recoverMachine(ctx context.Context, machineID string) (*types
 			Vcpus: vmInfo.JSON200.Config.Cpus.BootVcpus,
 		}
 		if vmInfo.JSON200.Config.Memory != nil {
-			machine.Spec.Memory = vmInfo.JSON200.Config.Memory.Size
+			machine.Spec.MemoryMB = vmInfo.JSON200.Config.Memory.Size
 		}
 	}
 

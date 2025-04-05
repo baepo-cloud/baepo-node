@@ -27,7 +27,7 @@ const file_proto_baepo_node_v1_initd_proto_rawDesc = "" +
 	"\n" +
 	"\x1fproto/baepo/node/v1/initd.proto\x12\rbaepo.node.v1\x1a\x1bgoogle/protobuf/empty.proto2F\n" +
 	"\x05InitD\x12=\n" +
-	"\vHealthcheck\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.EmptyB9Z7github.com/baepo-app/baepo-node/pkg/proto/baepo/node/v1b\x06proto3"
+	"\vHealthcheck\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.EmptyB@Z>github.com/baepo-cloud/baepo-node/internal/proto/baepo/node/v1b\x06proto3"
 
 var file_proto_baepo_node_v1_initd_proto_goTypes = []any{
 	(*emptypb.Empty)(nil), // 0: google.protobuf.Empty

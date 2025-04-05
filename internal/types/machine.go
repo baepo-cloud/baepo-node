@@ -17,9 +17,9 @@ type (
 	}
 
 	MachineSpec struct {
-		Vcpus  int
-		Memory int64
-		Env    map[string]string
+		Vcpus    int
+		MemoryMB int64
+		Env      map[string]string
 	}
 )
 

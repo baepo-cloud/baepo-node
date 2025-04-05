@@ -3,9 +3,9 @@ package initd
 import (
 	"context"
 	"fmt"
-	"github.com/baepo-app/baepo-node/internal/initd/connecthandler"
-	"github.com/baepo-app/baepo-node/internal/proto/baepo/node/v1/v1connect"
-	"github.com/baepo-app/baepo-node/internal/vsock"
+	"github.com/baepo-cloud/baepo-node/internal/initd/connecthandler"
+	"github.com/baepo-cloud/baepo-node/internal/proto/baepo/node/v1/v1connect"
+	"github.com/baepo-cloud/baepo-node/internal/vsock"
 	"net/http"
 )
 
