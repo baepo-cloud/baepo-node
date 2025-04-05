@@ -2,20 +2,20 @@ module github.com/baepo-cloud/baepo-node
 
 go 1.24.1
 
-replace github.com/baepo-app/baepo-oss => ../baepo-oss
+replace github.com/baepo-cloud/baepo-oss => ../baepo-oss
 
 tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
 
 require (
 	connectrpc.com/connect v1.18.1
-	github.com/baepo-app/baepo-oss v0.0.0-20250403204338-b25abe60ae16
+	github.com/baepo-cloud/baepo-oss v0.0.0-20250403204338-b25abe60ae16
 	github.com/joho/godotenv v1.5.1
 	github.com/mdlayher/vsock v1.2.1
 	github.com/nrednav/cuid2 v1.0.1
 	github.com/vishvananda/netlink v1.3.0
 	go.uber.org/fx v1.23.0
 	golang.org/x/net v0.38.0
-	golang.org/x/sys v0.31.0
+	golang.org/x/sys v0.32.0
 	google.golang.org/protobuf v1.36.6
 )
 
@@ -27,7 +27,7 @@ require (
 	github.com/go-openapi/swag v0.23.1 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
-	github.com/mdlayher/socket v0.4.1 // indirect
+	github.com/mdlayher/socket v0.5.1 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/oapi-codegen/oapi-codegen/v2 v2.4.1 // indirect
 	github.com/oasdiff/yaml v0.0.0-20250309154309-f31be36b4037 // indirect
@@ -42,7 +42,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/mod v0.24.0 // indirect
-	golang.org/x/sync v0.12.0 // indirect
+	golang.org/x/sync v0.13.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/tools v0.31.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

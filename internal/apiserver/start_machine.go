@@ -3,8 +3,8 @@ package apiserver
 import (
 	"connectrpc.com/connect"
 	"context"
-	v1pb "github.com/baepo-cloud/baepo-node/internal/proto/baepo/node/v1"
 	"github.com/baepo-cloud/baepo-node/internal/types"
+	v1pb "github.com/baepo-cloud/baepo-node/pkg/proto/baepo/node/v1"
 )
 
 func (s *Server) StartMachine(ctx context.Context, req *connect.Request[v1pb.NodeStartMachineRequest]) (*connect.Response[v1pb.NodeStartMachineReply], error) {

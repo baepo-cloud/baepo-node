@@ -4,7 +4,7 @@ package baepo.node.v1;
 
 import "google/protobuf/empty.proto";
 
-option go_package = "github.com/baepo-cloud/baepo-node/internal/proto/baepo/node/v1";
+option go_package = "github.com/baepo-cloud/baepo-node/pkg/proto/baepo/node/v1";
 
 service InitD {
   rpc Healthcheck(google.protobuf.Empty) returns (google.protobuf.Empty);

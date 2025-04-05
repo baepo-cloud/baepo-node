@@ -444,7 +444,7 @@ const file_proto_baepo_node_v1_node_proto_rawDesc = "" +
 	"\vNodeService\x12\\\n" +
 	"\fStartMachine\x12&.baepo.node.v1.NodeStartMachineRequest\x1a$.baepo.node.v1.NodeStartMachineReply\x12L\n" +
 	"\vStopMachine\x12%.baepo.node.v1.NodeStopMachineRequest\x1a\x16.google.protobuf.Empty\x12n\n" +
-	"\x12HealthcheckMachine\x12,.baepo.node.v1.NodeHealthcheckMachineRequest\x1a*.baepo.node.v1.NodeHealthcheckMachineReplyB@Z>github.com/baepo-cloud/baepo-node/internal/proto/baepo/node/v1b\x06proto3"
+	"\x12HealthcheckMachine\x12,.baepo.node.v1.NodeHealthcheckMachineRequest\x1a*.baepo.node.v1.NodeHealthcheckMachineReplyB;Z9github.com/baepo-cloud/baepo-node/pkg/proto/baepo/node/v1b\x06proto3"
 
 var (
 	file_proto_baepo_node_v1_node_proto_rawDescOnce sync.Once
