@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"github.com/baepo-app/baepo-node/pkg/apiserver"
-	"github.com/baepo-app/baepo-node/pkg/gatewayserver"
-	"github.com/baepo-app/baepo-node/pkg/networkprovider"
-	"github.com/baepo-app/baepo-node/pkg/nodeservice"
-	"github.com/baepo-app/baepo-node/pkg/runtimeprovider"
-	"github.com/baepo-app/baepo-node/pkg/types"
-	"github.com/baepo-app/baepo-node/pkg/volumeprovider"
+	"errors"
+	"github.com/baepo-app/baepo-node/internal/apiserver"
+	"github.com/baepo-app/baepo-node/internal/gatewayserver"
+	"github.com/baepo-app/baepo-node/internal/networkprovider"
+	"github.com/baepo-app/baepo-node/internal/nodeservice"
+	"github.com/baepo-app/baepo-node/internal/runtimeprovider"
+	"github.com/baepo-app/baepo-node/internal/types"
+	"github.com/baepo-app/baepo-node/internal/volumeprovider"
 	"github.com/baepo-app/baepo-oss/pkg/fxlog"
 	"github.com/baepo-app/baepo-oss/pkg/proto/baepo/api/v1/v1connect"
 	_ "github.com/joho/godotenv/autoload"
@@ -65,9 +66,11 @@ func main() {
 	).Run()
 }
 
-func provideConfig() types.NodeServerConfig {
+func provideConfig() (*types.NodeServerConfig, error) {
 	config := types.NodeServerConfig{
-		IPAddr:           "127.0.0.1",
+		IPAddr:           os.Getenv("NODE_IP_ADDR"),
+		ClusterID:        os.Getenv("NODE_CLUSTER_ID"),
+		BootstrapToken:   os.Getenv("NODE_BOOTSTRAP_TOKEN"),
 		APIAddr:          os.Getenv("NODE_API_ADDR"),
 		GatewayAddr:      os.Getenv("NODE_GATEWAY_ADDR"),
 		StorageDirectory: os.Getenv("NODE_STORAGE_DIRECTORY"),
@@ -81,14 +84,20 @@ func provideConfig() types.NodeServerConfig {
 	if config.StorageDirectory == "" {
 		config.StorageDirectory = "./storage"
 	}
-	return config
+	if config.ClusterID == "" {
+		return nil, errors.New("NODE_CLUSTER_ID env variable required")
+	}
+	if config.BootstrapToken == "" {
+		return nil, errors.New("NODE_BOOTSTRAP_TOKEN env variable required")
+	}
+	return &config, nil
 }
 
 func provideVolumeProvider() types.VolumeProvider {
 	return volumeprovider.New("vg_sandbox", "code_interpreter")
 }
 
-func provideRuntimeProvider(config types.NodeServerConfig) types.RuntimeProvider {
+func provideRuntimeProvider(config *types.NodeServerConfig) types.RuntimeProvider {
 	return runtimeprovider.New(
 		"./resources/cloud-hypervisor",
 		config.StorageDirectory,
@@ -98,16 +107,16 @@ func provideRuntimeProvider(config types.NodeServerConfig) types.RuntimeProvider
 }
 
 func provideApiClient() v1connect.NodeServiceClient {
-	transport := &http2.Transport{
-		AllowHTTP: true, // For localhost dev
-		DialTLSContext: func(ctx context.Context, network, addr string, cfg *tls.Config) (net.Conn, error) {
-			return net.Dial(network, addr)
+	client := &http.Client{
+		Transport: &http2.Transport{
+			AllowHTTP: true,
+			DialTLSContext: func(ctx context.Context, network, addr string, cfg *tls.Config) (net.Conn, error) {
+				return net.Dial(network, addr)
+			},
+			ReadIdleTimeout: 0,
+			PingTimeout:     60 * time.Second,
 		},
-		ReadIdleTimeout: 0, // No timeout for streaming connections
-		PingTimeout:     60 * time.Second,
 	}
-
-	client := &http.Client{Transport: transport}
 
 	return v1connect.NewNodeServiceClient(client, "http://localhost:3000")
 }
