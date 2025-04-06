@@ -9,5 +9,7 @@ type RuntimeProvider interface {
 
 	Terminate(ctx context.Context, machine *Machine) error
 
+	Healthcheck(ctx context.Context, machine *Machine) error
+
 	RecoverRunningMachines(ctx context.Context) ([]*Machine, error)
 }

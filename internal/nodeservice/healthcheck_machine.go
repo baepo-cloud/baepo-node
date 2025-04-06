@@ -13,17 +13,10 @@ func (s *Service) HealthcheckMachine(ctx context.Context, machineID string) (*ty
 	}
 
 	slog.Info("performing machine healthcheck", slog.String("machine-id", machineID))
+	err = s.runtimeProvider.Healthcheck(ctx, machine)
+	if err != nil {
+		return nil, err
+	}
 
-	//httpClient := &http.Client{
-	//	Transport: &http.Transport{
-	//		DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-	//			return vsock.Dial(s.getInitDaemonSocketPath(machineID), initd.ServerPort)
-	//		},
-	//	},
-	//}
-	//initClient := v1connect.NewInitDClient(httpClient, "http://initd")
-	//_, err = initClient.Healthcheck(ctx, connect.NewRequest(&emptypb.Empty{}))
-
-	//todo set machine state
-	return machine, err
+	return machine, nil
 }
