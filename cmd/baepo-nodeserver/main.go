@@ -11,8 +11,7 @@ import (
 	"github.com/baepo-cloud/baepo-node/internal/runtimeprovider"
 	"github.com/baepo-cloud/baepo-node/internal/types"
 	"github.com/baepo-cloud/baepo-node/internal/volumeprovider"
-	"github.com/baepo-cloud/baepo-oss/pkg/fxlog"
-	"github.com/baepo-cloud/baepo-oss/pkg/proto/baepo/api/v1/v1connect"
+	"github.com/baepo-cloud/baepo-proto/go/baepo/api/v1/v1connect"
 	_ "github.com/joho/godotenv/autoload"
 	"go.uber.org/fx"
 	"golang.org/x/net/http2"
@@ -24,7 +23,6 @@ import (
 
 func main() {
 	fx.New(
-		fxlog.Logger(),
 		fx.Provide(provideConfig),
 		fx.Provide(fx.Annotate(networkprovider.New, fx.As(new(types.NetworkProvider)))),
 		fx.Provide(provideVolumeProvider),

@@ -6,7 +6,7 @@ import (
 	"github.com/baepo-cloud/baepo-node/internal/initd"
 	"github.com/baepo-cloud/baepo-node/internal/types"
 	"github.com/baepo-cloud/baepo-node/internal/vsock"
-	"github.com/baepo-cloud/baepo-node/pkg/proto/baepo/node/v1/v1connect"
+	"github.com/baepo-cloud/baepo-proto/go/baepo/node/v1/v1connect"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"net"
 	"net/http"

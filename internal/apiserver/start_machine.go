@@ -4,7 +4,7 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"github.com/baepo-cloud/baepo-node/internal/types"
-	v1pb "github.com/baepo-cloud/baepo-node/pkg/proto/baepo/node/v1"
+	v1pb "github.com/baepo-cloud/baepo-proto/go/baepo/node/v1"
 )
 
 func (s *Server) StartMachine(ctx context.Context, req *connect.Request[v1pb.NodeStartMachineRequest]) (*connect.Response[v1pb.NodeStartMachineReply], error) {

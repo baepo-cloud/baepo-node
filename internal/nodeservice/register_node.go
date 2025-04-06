@@ -6,7 +6,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/typeutil"
-	v1pb "github.com/baepo-cloud/baepo-oss/pkg/proto/baepo/api/v1"
+	v1pb "github.com/baepo-cloud/baepo-proto/go/baepo/api/v1"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 	"log/slog"

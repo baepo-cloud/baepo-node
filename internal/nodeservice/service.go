@@ -7,7 +7,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/types"
-	"github.com/baepo-cloud/baepo-oss/pkg/proto/baepo/api/v1/v1connect"
+	"github.com/baepo-cloud/baepo-proto/go/baepo/api/v1/v1connect"
 	"log/slog"
 	"net"
 	"sync"

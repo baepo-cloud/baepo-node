@@ -3,7 +3,7 @@ package runtimeprovider
 import (
 	"context"
 	"fmt"
-	"github.com/baepo-cloud/baepo-node/internal/chclient"
+	"github.com/baepo-cloud/baepo-node/internal/runtimeprovider/chclient"
 	"github.com/baepo-cloud/baepo-node/internal/types"
 	"github.com/baepo-cloud/baepo-node/internal/typeutil"
 )

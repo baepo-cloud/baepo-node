@@ -6,7 +6,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/types"
-	"github.com/baepo-cloud/baepo-node/pkg/proto/baepo/node/v1/v1connect"
+	"github.com/baepo-cloud/baepo-proto/go/baepo/node/v1/v1connect"
 	"log/slog"
 	"net/http"
 )
