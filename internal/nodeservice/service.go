@@ -7,14 +7,9 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/types"
-	"github.com/baepo-cloud/baepo-node/internal/typeutil"
-	v1pb "github.com/baepo-cloud/baepo-oss/pkg/proto/baepo/api/v1"
 	"github.com/baepo-cloud/baepo-oss/pkg/proto/baepo/api/v1/v1connect"
-	"google.golang.org/protobuf/types/known/emptypb"
 	"log/slog"
 	"net"
-	"os"
-	"path"
 	"sync"
 	"time"
 )
@@ -102,80 +97,6 @@ func (s *Service) Start(ctx context.Context) error {
 func (s *Service) Stop(ctx context.Context) error {
 	s.cancelRegisterCtx()
 	return nil
-}
-
-func (s *Service) registerNode(ctx context.Context) error {
-	slog.Info("starting node registration...")
-	stream := s.apiClient.Connect(ctx)
-	nodeTokenFilePath := path.Join(s.config.StorageDirectory, "token")
-
-	var nodeToken *string
-	if b, err := os.ReadFile(nodeTokenFilePath); err == nil {
-		nodeToken = typeutil.Ptr(string(b))
-	}
-
-	err := stream.Send(&v1pb.NodeConnectClientEvent{
-		Event: &v1pb.NodeConnectClientEvent_Register{
-			Register: &v1pb.NodeConnectClientEvent_RegisterRequest{
-				ClusterId:       s.config.ClusterID,
-				BootstrapToken:  s.config.BootstrapToken,
-				NodeToken:       nodeToken,
-				ApiEndpoint:     s.getEndpoint(s.config.APIAddr),
-				GatewayEndpoint: s.getEndpoint(s.config.GatewayAddr),
-				IpAddress:       s.config.IPAddr,
-			},
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to send registration request: %w", err)
-	}
-
-	event, err := stream.Receive()
-	if err != nil {
-		return fmt.Errorf("failed to receive registration response: %w", err)
-	}
-
-	registrationResponse, ok := event.Event.(*v1pb.NodeConnectServerEvent_Register)
-	if !ok {
-		return fmt.Errorf("received registration response is not valid: %v", event.Event)
-	}
-
-	s.authorityCert, err = parseCertificate(registrationResponse.Register.AuthorityCert)
-	if err != nil {
-		return fmt.Errorf("failed to parse authority certificate: %w", err)
-	}
-
-	tlsCert, err := tls.X509KeyPair(registrationResponse.Register.ServerCert, registrationResponse.Register.ServerKey)
-	if err != nil {
-		return fmt.Errorf("failed to load server tls certificate: %w", err)
-	}
-	s.tlsCert = &tlsCert
-
-	err = os.WriteFile(nodeTokenFilePath, []byte(registrationResponse.Register.NodeToken), 0644)
-	if err != nil {
-		return fmt.Errorf("failed to store node token: %w", err)
-	}
-
-	slog.Info("node registration completed", slog.String("node-id", registrationResponse.Register.NodeId))
-
-	pingTicker := time.NewTicker(30 * time.Second)
-	defer pingTicker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-pingTicker.C:
-			err = stream.Send(&v1pb.NodeConnectClientEvent{
-				Event: &v1pb.NodeConnectClientEvent_Ping{
-					Ping: &emptypb.Empty{},
-				},
-			})
-			if err != nil {
-				return err
-			}
-		}
-	}
 }
 
 func (s *Service) AuthorityCertificate() *x509.Certificate {

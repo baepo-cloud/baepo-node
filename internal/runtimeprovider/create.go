@@ -21,11 +21,11 @@ func (p *Provider) Create(ctx context.Context, machine *types.Machine) (int, err
 
 	_, err = vmmClient.CreateVM(ctx, chclient.VmConfig{
 		Cpus: &chclient.CpusConfig{
-			BootVcpus: machine.Spec.Vcpus,
-			MaxVcpus:  machine.Spec.Vcpus,
+			BootVcpus: int(machine.Spec.Vcpus),
+			MaxVcpus:  int(machine.Spec.Vcpus),
 		},
 		Memory: &chclient.MemoryConfig{
-			Size: machine.Spec.MemoryMB * 1024 * 1024, // convert Mib to bytes
+			Size: int64(machine.Spec.MemoryMB * 1024 * 1024), // convert Mib to bytes
 		},
 		Disks: &[]chclient.DiskConfig{
 			{

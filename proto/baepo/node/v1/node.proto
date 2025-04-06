@@ -16,8 +16,8 @@ service NodeService {
 
 message NodeStartMachineRequest {
   string machine_id = 1;
-  int32 v_cpus = 2;
-  int64 memory_mb = 3;
+  uint32 v_cpus = 2;
+  uint64 memory_mb = 3;
   map<string, string> env = 4;
 }
 

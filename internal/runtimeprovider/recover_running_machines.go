@@ -98,10 +98,10 @@ func (p *Provider) recoverMachine(ctx context.Context, machineID string) (*types
 
 	if vmInfo.JSON200.Config.Cpus != nil {
 		machine.Spec = &types.MachineSpec{
-			Vcpus: vmInfo.JSON200.Config.Cpus.BootVcpus,
+			Vcpus: uint32(vmInfo.JSON200.Config.Cpus.BootVcpus),
 		}
 		if vmInfo.JSON200.Config.Memory != nil {
-			machine.Spec.MemoryMB = vmInfo.JSON200.Config.Memory.Size
+			machine.Spec.MemoryMB = uint64(vmInfo.JSON200.Config.Memory.Size / 1024 / 1024)
 		}
 	}
 

@@ -64,15 +64,24 @@ func (p *Provider) AllocateInterface() (*types.NetworkInterface, error) {
 
 		cmd := exec.Command("ebtables", "-A", "FORWARD", "-i", tapName, "-s", "!", strings.ToLower(macAddress), "-j", "DROP")
 		if err = cmd.Run(); err != nil {
-			slog.Error("failed to add mac filtering rule", slog.Any("error", err))
+			b, _ := cmd.Output()
+			slog.Error("failed to add mac filtering rule",
+				slog.Any("error", err),
+				slog.String("output", string(b)))
 		}
 		cmd = exec.Command("iptables", "-A", "FORWARD", "-i", tapName, "!", "-s", ipAddress.String(), "-j", "DROP")
 		if err = cmd.Run(); err != nil {
-			slog.Error("failed to add ip filtering rule", slog.Any("error", err))
+			b, _ := cmd.Output()
+			slog.Error("failed to add ip filtering rule",
+				slog.Any("error", err),
+				slog.String("output", string(b)))
 		}
 		cmd = exec.Command("arptables", "-A", "FORWARD", "-i", tapName, "--source-mac", "!", strings.ToLower(macAddress), "-j", "DROP")
 		if err = cmd.Run(); err != nil {
-			slog.Error("failed to add arp filtering rule", slog.Any("error", err))
+			b, _ := cmd.Output()
+			slog.Error("failed to add arp filtering rule",
+				slog.Any("error", err),
+				slog.String("output", string(b)))
 		}
 
 		p.allocatedIPs[index] = tap.LinkAttrs.Name

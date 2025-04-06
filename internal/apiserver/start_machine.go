@@ -11,7 +11,7 @@ func (s *Server) StartMachine(ctx context.Context, req *connect.Request[v1pb.Nod
 	machine, err := s.service.StartMachine(ctx, types.NodeStartMachineOptions{
 		MachineID: req.Msg.MachineId,
 		Spec: types.MachineSpec{
-			Vcpus:    int(req.Msg.VCpus),
+			Vcpus:    req.Msg.VCpus,
 			MemoryMB: req.Msg.MemoryMb,
 			Env:      req.Msg.Env,
 		},
