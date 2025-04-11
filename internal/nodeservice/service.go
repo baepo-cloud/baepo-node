@@ -15,7 +15,7 @@ import (
 )
 
 type Service struct {
-	apiClient         v1connect.NodeServiceClient
+	apiClient         v1connect.NodeControllerServiceClient
 	volumeProvider    types.VolumeProvider
 	networkProvider   types.NetworkProvider
 	runtimeProvider   types.RuntimeProvider
@@ -30,7 +30,7 @@ type Service struct {
 var _ types.NodeService = (*Service)(nil)
 
 func New(
-	apiClient v1connect.NodeServiceClient,
+	apiClient v1connect.NodeControllerServiceClient,
 	volumeProvider types.VolumeProvider,
 	networkProvider types.NetworkProvider,
 	runtimeProvider types.RuntimeProvider,

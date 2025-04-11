@@ -9,6 +9,11 @@ import (
 )
 
 func (p *Provider) Create(ctx context.Context, machine *types.Machine) (int, error) {
+	err := p.BuildInitRamFS(ctx, machine)
+	if err != nil {
+		return 0, err
+	}
+
 	pid, err := p.StartHypervisor(ctx, machine.ID)
 	if err != nil {
 		return -1, err
@@ -54,12 +59,8 @@ func (p *Provider) Create(ctx context.Context, machine *types.Machine) (int, err
 		},
 		Payload: chclient.PayloadConfig{
 			Kernel:    typeutil.Ptr(p.vmLinuxPath),
-			Initramfs: typeutil.Ptr(p.initRamFSPath),
-			Cmdline: typeutil.Ptr(fmt.Sprintf(
-				"console=ttyS0 console=hvc0 root=/dev/vda rw rdinit=/sbin/init -- %v/24 %v", // todo: pass mask
-				machine.NetworkInterface.IPAddress.String(),
-				machine.NetworkInterface.MacAddress.String(),
-			)),
+			Initramfs: typeutil.Ptr(p.getInitRamFSPath(machine.ID)),
+			Cmdline:   typeutil.Ptr("console=ttyS0 console=hvc0 root=/dev/vda rw rdinit=/init"),
 		},
 		Rng: &chclient.RngConfig{
 			Src: "/dev/urandom",

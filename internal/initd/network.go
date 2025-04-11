@@ -3,12 +3,16 @@ package initd
 import (
 	"fmt"
 	"github.com/vishvananda/netlink"
+	"net"
 	"os"
 	"strings"
 )
 
 var (
-	dnsServers   = []string{"1.1.1.1", "1.0.0.1", "2606:4700:4700::1111", "2606:4700:4700::1001"}
+	dnsServers = []string{
+		"1.1.1.1", "1.0.0.1",
+		"2606:4700:4700::1111", "2606:4700:4700::1001",
+	}
 	defaultHosts = []string{
 		"127.0.0.1 localhost.localdomain localhost",
 		"::1 ip6-localhost ip6-loopback",
@@ -47,11 +51,21 @@ func (d *initd) SetupNetwork() error {
 		return fmt.Errorf("error getting eth0 interface: %v", err)
 	}
 
-	if err = netlink.LinkSetHardwareAddr(eth0, d.config.MacAddress); err != nil {
+	macAddr, err := net.ParseMAC(d.config.MacAddress)
+	if err != nil {
+		return fmt.Errorf("failed to parse mac address: %w", err)
+	}
+
+	if err = netlink.LinkSetHardwareAddr(eth0, macAddr); err != nil {
 		return fmt.Errorf("failed to set mac address: %w", err)
 	}
 
-	if err = netlink.AddrAdd(eth0, d.config.IPAddress); err != nil {
+	ipAddr, err := netlink.ParseAddr(d.config.IPAddress)
+	if err != nil {
+		return fmt.Errorf("failed to parse ip address: %w", err)
+	}
+
+	if err = netlink.AddrAdd(eth0, ipAddr); err != nil {
 		return fmt.Errorf("failed to set ip address: %w", err)
 	}
 
@@ -59,12 +73,9 @@ func (d *initd) SetupNetwork() error {
 		return fmt.Errorf("error bringing up eth0: %v", err)
 	}
 
-	// Add default route
 	route := &netlink.Route{
-		Dst: nil, // default route
-		Gw:  d.config.GatewayAddress,
+		Gw: net.ParseIP(d.config.GatewayAddress),
 	}
-
 	if err = netlink.RouteAdd(route); err != nil {
 		return fmt.Errorf("error adding default route: %v", err)
 	}

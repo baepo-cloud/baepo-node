@@ -1,6 +1,9 @@
 package types
 
-import "context"
+import (
+	"context"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+)
 
 type (
 	Volume struct {
@@ -10,7 +13,7 @@ type (
 	}
 
 	VolumeProvider interface {
-		CreateVolume(ctx context.Context) (*Volume, error)
+		CreateVolume(ctx context.Context, image v1.Image) (*Volume, error)
 
 		DeleteVolume(ctx context.Context, volume *Volume) error
 	}

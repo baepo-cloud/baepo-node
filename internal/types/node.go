@@ -8,12 +8,15 @@ import (
 
 type (
 	NodeServerConfig struct {
-		ClusterID        string
-		BootstrapToken   string
-		IPAddr           string
-		APIAddr          string
-		GatewayAddr      string
-		StorageDirectory string
+		ClusterID             string
+		BootstrapToken        string
+		IPAddr                string
+		APIAddr               string
+		GatewayAddr           string
+		StorageDirectory      string
+		InitBinary            string
+		VMLinux               string
+		CloudHypervisorBinary string
 	}
 
 	NodeStartMachineOptions struct {

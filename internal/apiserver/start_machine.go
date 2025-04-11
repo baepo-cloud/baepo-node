@@ -14,6 +14,7 @@ func (s *Server) StartMachine(ctx context.Context, req *connect.Request[v1pb.Nod
 			Vcpus:    req.Msg.VCpus,
 			MemoryMB: req.Msg.MemoryMb,
 			Env:      req.Msg.Env,
+			Image:    req.Msg.Image,
 		},
 	})
 	if err != nil {

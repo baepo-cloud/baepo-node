@@ -3,9 +3,7 @@ package initd
 import (
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/initd/types"
-	"github.com/vishvananda/netlink"
 	"log/slog"
-	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -15,9 +13,14 @@ import (
 
 type (
 	Config struct {
-		IPAddress      *netlink.Addr
-		MacAddress     net.HardwareAddr
-		GatewayAddress net.IP
+		IPAddress      string
+		MacAddress     string
+		GatewayAddress string
+		Env            map[string]string
+		User           string
+		WorkingDir     string
+		Command        []string
+		Hostname       string
 	}
 
 	initd struct {

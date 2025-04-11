@@ -4,10 +4,17 @@ import (
 	"fmt"
 	"golang.org/x/sys/unix"
 	"log/slog"
+	"os"
 	"syscall"
 )
 
 func (d *initd) MountFilesystems() error {
+	for _, directory := range []string{"/dev", "/mnt"} {
+		if err := os.MkdirAll(directory, 0644); err != nil {
+			return err
+		}
+	}
+
 	mounts := []struct {
 		source string
 		target string

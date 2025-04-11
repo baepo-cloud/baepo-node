@@ -1,29 +1,24 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"github.com/baepo-cloud/baepo-node/internal/initd"
-	"github.com/vishvananda/netlink"
-	"net"
 	"os"
 )
 
 func main() {
-	ipAddr, err := netlink.ParseAddr(os.Args[1])
+	configFile, err := os.Open("/config.json")
 	if err != nil {
-		panic(fmt.Errorf("failed to parse ip address: %w", err))
+		panic(err)
+	}
+	defer configFile.Close()
+
+	var config initd.Config
+	if err = json.NewDecoder(configFile).Decode(&config); err != nil {
+		panic(err)
 	}
 
-	macAddr, err := net.ParseMAC(os.Args[2])
-	if err != nil {
-		panic(fmt.Errorf("failed to parse mac address: %w", err))
-	}
-
-	err = initd.Run(initd.Config{
-		IPAddress:      ipAddr,
-		MacAddress:     macAddr,
-		GatewayAddress: net.ParseIP("192.168.100.1"),
-	})
+	err = initd.Run(config)
 	if err != nil {
 		panic(err)
 	}

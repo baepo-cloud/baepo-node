@@ -17,9 +17,13 @@ type (
 	}
 
 	MachineSpec struct {
-		Vcpus    uint32
-		MemoryMB uint64
-		Env      map[string]string
+		Image      string
+		Vcpus      uint32
+		MemoryMB   uint64
+		Env        map[string]string
+		User       string
+		WorkingDir string
+		Command    []string
 	}
 )
 

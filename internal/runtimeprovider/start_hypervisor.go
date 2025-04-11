@@ -12,7 +12,7 @@ import (
 
 func (p *Provider) StartHypervisor(ctx context.Context, machineID string) (int, error) {
 	socketPath := p.getHypervisorSocketPath(machineID)
-	cmd := exec.Command(p.binaryPath, "--api-socket", socketPath)
+	cmd := exec.Command(p.cloudHypervisorBinary, "--api-socket", socketPath)
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
 	}

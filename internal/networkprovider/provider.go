@@ -1,11 +1,13 @@
 package networkprovider
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/types"
 	"github.com/vishvananda/netlink"
-	"golang.org/x/sys/unix"
 	"net"
+	"os/exec"
 	"strings"
 	"sync"
 )
@@ -22,30 +24,27 @@ type Provider struct {
 var _ types.NetworkProvider = (*Provider)(nil)
 
 func New() (*Provider, error) {
-	bridgeInterface := "br0"
-	bridge, err := netlink.LinkByName(bridgeInterface)
+	_, networkCIDR, err := net.ParseCIDR("192.168.100.0/24")
 	if err != nil {
-		return nil, fmt.Errorf("bridge interface br0 not found (maybe run ./scripts/setup-network?): %w", err)
+		return nil, fmt.Errorf("invalid network CIDR: %w", err)
 	}
 
-	brigeAddrs, err := netlink.AddrList(bridge, unix.AF_INET)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list address of bridge interface: %w", err)
-	}
-
-	allocator := &Provider{
-		bridgeInterface: bridgeInterface,
-		networkCIDR:     brigeAddrs[0].IPNet,
-		networkAddr:     brigeAddrs[0].IPNet.IP,
-		gatewayAddr:     brigeAddrs[0].IP,
+	p := &Provider{
+		bridgeInterface: "br0",
+		networkCIDR:     networkCIDR,
 		lock:            sync.Mutex{},
 	}
 
-	ones, bits := allocator.networkCIDR.Mask.Size()
+	_, err = p.SetupBridge("eth0")
+	if err != nil {
+		return nil, fmt.Errorf("failed to setup bridge interface: %w", err)
+	}
+
+	ones, bits := p.networkCIDR.Mask.Size()
 	maxAddresses := 1 << (bits - ones)
-	allocator.allocatedIPs = make([]string, maxAddresses)
-	allocator.allocatedIPs[0] = "network"                                                  // claim network address
-	allocator.allocatedIPs[allocator.calculateOffsetFromIP(allocator.gatewayAddr)] = "br0" // claim gateway address
+	p.allocatedIPs = make([]string, maxAddresses)
+	p.allocatedIPs[p.calculateOffsetFromIP(p.networkAddr)] = "network" // claim network address
+	p.allocatedIPs[p.calculateOffsetFromIP(p.gatewayAddr)] = "br0"     // claim gateway address
 
 	links, err := netlink.LinkList()
 	if err != nil {
@@ -55,12 +54,24 @@ func New() (*Provider, error) {
 	for _, link := range links {
 		if tapName := link.Attrs().Name; strings.HasPrefix(tapName, "tap") {
 			hwAddr := link.Attrs().HardwareAddr
-			if index := allocator.calculateIndexFromHwAddr(hwAddr); index != -1 {
-				allocator.allocatedIPs[index] = tapName
+			if index := p.calculateIndexFromHwAddr(hwAddr); index != -1 {
+				p.allocatedIPs[index] = tapName
 			}
 		}
 	}
-	return allocator, nil
+	return p, nil
+}
+
+func (p *Provider) runCmd(ctx context.Context, name string, args ...string) error {
+	cmd := exec.CommandContext(ctx, name, args...)
+	stderr := new(bytes.Buffer)
+	cmd.Stderr = stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%w: %s", err, stderr.String())
+	}
+
+	return nil
 }
 
 func (p *Provider) calculateOffsetFromIP(ip net.IP) int {

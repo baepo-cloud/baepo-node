@@ -25,9 +25,9 @@ func (s *Service) registerNode(ctx context.Context) error {
 		nodeToken = typeutil.Ptr(string(b))
 	}
 
-	err := stream.Send(&v1pb.NodeConnectClientEvent{
-		Event: &v1pb.NodeConnectClientEvent_Register{
-			Register: &v1pb.NodeConnectClientEvent_RegisterRequest{
+	err := stream.Send(&v1pb.NodeControllerConnectClientEvent{
+		Event: &v1pb.NodeControllerConnectClientEvent_Register{
+			Register: &v1pb.NodeControllerConnectClientEvent_RegisterRequest{
 				ClusterId:       s.config.ClusterID,
 				BootstrapToken:  s.config.BootstrapToken,
 				NodeToken:       nodeToken,
@@ -46,7 +46,7 @@ func (s *Service) registerNode(ctx context.Context) error {
 		return fmt.Errorf("failed to receive registration response: %w", err)
 	}
 
-	registrationResponse, ok := event.Event.(*v1pb.NodeConnectServerEvent_Register)
+	registrationResponse, ok := event.Event.(*v1pb.NodeControllerConnectServerEvent_Register)
 	if !ok {
 		return fmt.Errorf("received registration response is not valid: %v", event.Event)
 	}
@@ -88,7 +88,7 @@ func (s *Service) registerNode(ctx context.Context) error {
 	}
 }
 
-func (s *Service) sendStatsEvent(stream *connect.BidiStreamForClient[v1pb.NodeConnectClientEvent, v1pb.NodeConnectServerEvent]) error {
+func (s *Service) sendStatsEvent(stream *connect.BidiStreamForClient[v1pb.NodeControllerConnectClientEvent, v1pb.NodeControllerConnectServerEvent]) error {
 	memInfo, err := mem.VirtualMemory()
 	if err != nil {
 		return err
@@ -103,12 +103,12 @@ func (s *Service) sendStatsEvent(stream *connect.BidiStreamForClient[v1pb.NodeCo
 	reservedMemory := uint64(0)
 	for _, machine := range s.machines {
 		runningMachineIDs = append(runningMachineIDs, machine.ID)
-		reservedMemory += uint64(machine.Spec.MemoryMB)
+		reservedMemory += machine.Spec.MemoryMB
 	}
 
-	return stream.Send(&v1pb.NodeConnectClientEvent{
-		Event: &v1pb.NodeConnectClientEvent_Stats{
-			Stats: &v1pb.NodeConnectClientEvent_StatsEvent{
+	return stream.Send(&v1pb.NodeControllerConnectClientEvent{
+		Event: &v1pb.NodeControllerConnectClientEvent_Stats{
+			Stats: &v1pb.NodeControllerConnectClientEvent_StatsEvent{
 				TotalMemory:       memInfo.Total,
 				UsedMemory:        memInfo.Used,
 				CpuCount:          uint32(len(cpuInfo)),

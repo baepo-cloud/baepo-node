@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/apiserver"
 	"github.com/baepo-cloud/baepo-node/internal/gatewayserver"
 	"github.com/baepo-cloud/baepo-node/internal/networkprovider"
@@ -18,6 +19,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -66,12 +68,15 @@ func main() {
 
 func provideConfig() (*types.NodeServerConfig, error) {
 	config := types.NodeServerConfig{
-		IPAddr:           os.Getenv("NODE_IP_ADDR"),
-		ClusterID:        os.Getenv("NODE_CLUSTER_ID"),
-		BootstrapToken:   os.Getenv("NODE_BOOTSTRAP_TOKEN"),
-		APIAddr:          os.Getenv("NODE_API_ADDR"),
-		GatewayAddr:      os.Getenv("NODE_GATEWAY_ADDR"),
-		StorageDirectory: os.Getenv("NODE_STORAGE_DIRECTORY"),
+		ClusterID:             os.Getenv("NODE_CLUSTER_ID"),
+		BootstrapToken:        os.Getenv("NODE_BOOTSTRAP_TOKEN"),
+		IPAddr:                os.Getenv("NODE_IP_ADDR"),
+		APIAddr:               os.Getenv("NODE_API_ADDR"),
+		GatewayAddr:           os.Getenv("NODE_GATEWAY_ADDR"),
+		StorageDirectory:      os.Getenv("NODE_STORAGE_DIRECTORY"),
+		InitBinary:            os.Getenv("NODE_INIT_BINARY"),
+		VMLinux:               os.Getenv("NODE_VM_LINUX"),
+		CloudHypervisorBinary: os.Getenv("NODE_CLOUD_HYPERVISOR_BINARY"),
 	}
 	if config.APIAddr == "" {
 		config.APIAddr = ":3443"
@@ -82,29 +87,59 @@ func provideConfig() (*types.NodeServerConfig, error) {
 	if config.StorageDirectory == "" {
 		config.StorageDirectory = "./storage"
 	}
+	if config.InitBinary == "" {
+		config.InitBinary = "./resources/baepo-initd"
+	}
+	if config.VMLinux == "" {
+		config.VMLinux = "./resources/vmlinux"
+	}
+	if config.CloudHypervisorBinary == "" {
+		config.CloudHypervisorBinary = "./resources/cloud-hypervisor"
+	}
 	if config.ClusterID == "" {
 		return nil, errors.New("NODE_CLUSTER_ID env variable required")
 	}
 	if config.BootstrapToken == "" {
 		return nil, errors.New("NODE_BOOTSTRAP_TOKEN env variable required")
 	}
+
+	if !filepath.IsAbs(config.InitBinary) {
+		path, err := filepath.Abs(config.InitBinary)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get absolute path of init binary: %w", err)
+		}
+		config.InitBinary = path
+	}
+	if !filepath.IsAbs(config.StorageDirectory) {
+		path, err := filepath.Abs(config.StorageDirectory)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get absolute path of the storage directory: %w", err)
+		}
+		config.StorageDirectory = path
+	}
+
 	return &config, nil
 }
 
 func provideVolumeProvider() types.VolumeProvider {
-	return volumeprovider.New("vg_sandbox", "code_interpreter")
+	vg := os.Getenv("NODE_VOLUME_GROUP")
+	if vg == "" {
+		vg = "vg_baepo"
+	}
+
+	return volumeprovider.New(vg)
 }
 
 func provideRuntimeProvider(config *types.NodeServerConfig) types.RuntimeProvider {
 	return runtimeprovider.New(
-		"./resources/cloud-hypervisor",
+		config.CloudHypervisorBinary,
+		config.InitBinary,
 		config.StorageDirectory,
-		"./resources/vmlinux",
-		"./resources/initramfs.cpio.gz",
+		config.VMLinux,
 	)
 }
 
-func provideApiClient() v1connect.NodeServiceClient {
+func provideApiClient() v1connect.NodeControllerServiceClient {
 	client := &http.Client{
 		Transport: &http2.Transport{
 			AllowHTTP: true,
@@ -116,5 +151,5 @@ func provideApiClient() v1connect.NodeServiceClient {
 		},
 	}
 
-	return v1connect.NewNodeServiceClient(client, "http://localhost:3000")
+	return v1connect.NewNodeControllerServiceClient(client, "http://localhost:3000")
 }

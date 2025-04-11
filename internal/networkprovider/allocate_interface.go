@@ -1,12 +1,12 @@
 package networkprovider
 
 import (
+	"context"
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/types"
 	"github.com/vishvananda/netlink"
 	"log/slog"
 	"net"
-	"os/exec"
 	"strings"
 )
 
@@ -62,33 +62,38 @@ func (p *Provider) AllocateInterface() (*types.NetworkInterface, error) {
 			return nil, fmt.Errorf("failed to set tap interface master: %w", err)
 		}
 
-		cmd := exec.Command("ebtables", "-A", "FORWARD", "-i", tapName, "-s", "!", strings.ToLower(macAddress), "-j", "DROP")
-		if err = cmd.Run(); err != nil {
-			b, _ := cmd.Output()
-			slog.Error("failed to add mac filtering rule",
-				slog.Any("error", err),
-				slog.String("output", string(b)))
+		err = p.runCmd(context.Background(), "ebtables", "-A", "FORWARD",
+			"-i", tapName,
+			"-s", "!", strings.ToLower(macAddress),
+			"-j", "DROP")
+		if err != nil {
+			slog.Error("failed to add mac filtering rule", slog.Any("error", err))
 		}
-		cmd = exec.Command("iptables", "-A", "FORWARD", "-i", tapName, "!", "-s", ipAddress.String(), "-j", "DROP")
-		if err = cmd.Run(); err != nil {
-			b, _ := cmd.Output()
-			slog.Error("failed to add ip filtering rule",
-				slog.Any("error", err),
-				slog.String("output", string(b)))
+
+		err = p.runCmd(context.Background(), "iptables", "-A", "FORWARD",
+			"-i", tapName,
+			"!", "-s", ipAddress.String(),
+			"-j", "DROP")
+		if err != nil {
+			slog.Error("failed to add ip filtering rule", slog.Any("error", err))
 		}
-		cmd = exec.Command("arptables", "-A", "FORWARD", "-i", tapName, "--source-mac", "!", strings.ToLower(macAddress), "-j", "DROP")
-		if err = cmd.Run(); err != nil {
-			b, _ := cmd.Output()
-			slog.Error("failed to add arp filtering rule",
-				slog.Any("error", err),
-				slog.String("output", string(b)))
+
+		_ = p.runCmd(context.Background(), "arptables", "-N", "FORWARD")
+		err = p.runCmd(context.Background(), "arptables", "-A", "FORWARD",
+			"-i", tapName,
+			"!", "--source-mac", strings.ToLower(macAddress),
+			"-j", "DROP")
+		if err != nil {
+			slog.Error("failed to add arp filtering rule", slog.Any("error", err))
 		}
 
 		p.allocatedIPs[index] = tap.LinkAttrs.Name
 		return &types.NetworkInterface{
-			Name:       tapName,
-			IPAddress:  ipAddress,
-			MacAddress: hwAddress,
+			Name:           tapName,
+			IPAddress:      ipAddress,
+			MacAddress:     hwAddress,
+			NetworkCIDR:    p.networkCIDR,
+			GatewayAddress: p.gatewayAddr,
 		}, nil
 	}
 

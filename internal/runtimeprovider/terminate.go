@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/types"
 	"log/slog"
+	"os"
 )
 
 func (p *Provider) Terminate(ctx context.Context, machine *types.Machine) error {
@@ -18,5 +19,6 @@ func (p *Provider) Terminate(ctx context.Context, machine *types.Machine) error 
 	}
 
 	_, err = vmmClient.ShutdownVMMWithResponse(ctx)
+	_ = os.Remove(p.getInitRamFSPath(machine.ID))
 	return err
 }
