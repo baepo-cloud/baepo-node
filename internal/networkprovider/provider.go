@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/types"
 	"github.com/vishvananda/netlink"
+	"gorm.io/gorm"
 	"net"
 	"os/exec"
 	"strings"
@@ -13,6 +14,7 @@ import (
 )
 
 type Provider struct {
+	db              *gorm.DB
 	bridgeInterface string
 	networkCIDR     *net.IPNet
 	networkAddr     net.IP
@@ -23,13 +25,14 @@ type Provider struct {
 
 var _ types.NetworkProvider = (*Provider)(nil)
 
-func New() (*Provider, error) {
+func New(db *gorm.DB) (*Provider, error) {
 	_, networkCIDR, err := net.ParseCIDR("192.168.100.0/24")
 	if err != nil {
 		return nil, fmt.Errorf("invalid network CIDR: %w", err)
 	}
 
 	p := &Provider{
+		db:              db,
 		bridgeInterface: "br0",
 		networkCIDR:     networkCIDR,
 		lock:            sync.Mutex{},

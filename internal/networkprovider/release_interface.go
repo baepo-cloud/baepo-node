@@ -2,46 +2,47 @@ package networkprovider
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/baepo-cloud/baepo-node/internal/types"
+	"github.com/baepo-cloud/baepo-node/internal/typeutil"
 	"github.com/vishvananda/netlink"
-	"log/slog"
+	"gorm.io/gorm"
+	"time"
 )
 
-func (p *Provider) ReleaseInterface(name string) error {
+func (p *Provider) ReleaseInterface(ctx context.Context, name string) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	index := -1
-	for i, tapName := range p.allocatedIPs {
-		if tapName == name {
-			index = i
-			break
-		}
+	var networkInterface types.NetworkInterface
+	err := p.db.WithContext(ctx).First(&networkInterface, "name = ? AND deleted_at IS NULL", name).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return types.ErrNetworkInterfaceNotFound
+	} else if err != nil {
+		return fmt.Errorf("failed to retrieve network interface: %w", err)
 	}
 
-	if index == -1 {
-		return fmt.Errorf("interface %s not found", name)
-	}
-
-	link, err := netlink.LinkByName(name)
+	link, err := netlink.LinkByName(networkInterface.Name)
 	if err != nil {
-		return fmt.Errorf("failed to find interface %s: %w", name, err)
+		return fmt.Errorf("failed to find interface %s: %w", networkInterface.Name, err)
 	}
 
-	if err = netlink.LinkDel(link); err != nil {
-		return fmt.Errorf("failed to delete interface %s: %w", name, err)
-	}
+	networkInterface.DeletedAt = typeutil.Ptr(time.Now())
+	return p.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err = tx.WithContext(ctx).Save(&networkInterface).Error; err != nil {
+			return fmt.Errorf("failed to save network interface in databaae: %w", err)
+		}
 
-	if err = p.runCmd(context.Background(), "ebtables", "-D", "FORWARD", "-i", name, "-j", "DROP"); err != nil {
-		slog.Error("failed to remove mac filtering rule", slog.Any("error", err))
-	}
-	if err = p.runCmd(context.Background(), "iptables", "-D", "FORWARD", "-i", name, "-j", "DROP"); err != nil {
-		slog.Error("failed to remove ip filtering rule", slog.Any("error", err))
-	}
-	if err = p.runCmd(context.Background(), "arptables", "-D", "FORWARD", "-i", name, "-j", "DROP"); err != nil {
-		slog.Error("failed to remove arp filtering rule", slog.Any("error", err))
-	}
+		if err = p.applyTapFirewallRules(ctx, &networkInterface, true); err != nil {
+			return fmt.Errorf("failed to apply firewall rules to tap interface: %w", err)
+		}
 
-	p.allocatedIPs[index] = ""
-	return nil
+		if err = netlink.LinkDel(link); err != nil {
+			return fmt.Errorf("failed to delete interface %s: %w", networkInterface.Name, err)
+		}
+
+		p.allocatedIPs[p.calculateOffsetFromIP(networkInterface.IPAddress)] = ""
+		return nil
+	})
 }

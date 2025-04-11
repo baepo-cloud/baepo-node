@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/runtimeprovider/chclient"
 	"github.com/baepo-cloud/baepo-node/internal/types"
+	"github.com/baepo-cloud/baepo-node/internal/typeutil"
 	"log/slog"
 	"net"
 	"os"
@@ -66,7 +67,7 @@ func (p *Provider) recoverMachine(ctx context.Context, machineID string) (*types
 	machine := &types.Machine{
 		ID:         machineID,
 		Status:     types.MachineStatusRunning,
-		RuntimePID: int(*pingRes.JSON200.Pid),
+		RuntimePID: typeutil.Ptr(int(*pingRes.JSON200.Pid)),
 	}
 
 	// Extract network interface details

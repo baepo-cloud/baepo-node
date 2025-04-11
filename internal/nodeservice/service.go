@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/types"
 	"github.com/baepo-cloud/baepo-proto/go/baepo/api/v1/v1connect"
+	"gorm.io/gorm"
 	"log/slog"
 	"net"
 	"sync"
@@ -15,6 +16,7 @@ import (
 )
 
 type Service struct {
+	db                *gorm.DB
 	apiClient         v1connect.NodeControllerServiceClient
 	volumeProvider    types.VolumeProvider
 	networkProvider   types.NetworkProvider
@@ -24,12 +26,12 @@ type Service struct {
 	tlsCert           *tls.Certificate
 	lock              *sync.Mutex
 	cancelRegisterCtx func()
-	machines          map[string]*types.Machine
 }
 
 var _ types.NodeService = (*Service)(nil)
 
 func New(
+	db *gorm.DB,
 	apiClient v1connect.NodeControllerServiceClient,
 	volumeProvider types.VolumeProvider,
 	networkProvider types.NetworkProvider,
@@ -37,37 +39,33 @@ func New(
 	config *types.NodeServerConfig,
 ) *Service {
 	return &Service{
+		db:              db,
 		apiClient:       apiClient,
 		volumeProvider:  volumeProvider,
 		networkProvider: networkProvider,
 		runtimeProvider: runtimeProvider,
 		config:          config,
-		lock:            &sync.Mutex{},
-		machines:        map[string]*types.Machine{},
 	}
 }
 
 func (s *Service) Start(ctx context.Context) error {
 	slog.Info("registering node...")
 
-	recoveredMachines, err := s.runtimeProvider.RecoverRunningMachines(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to recover running machines: %w", err)
-	}
-
-	for _, machine := range recoveredMachines {
-		if machine.NetworkInterface != nil {
-			machine.NetworkInterface, err = s.networkProvider.GetInterface(machine.NetworkInterface.Name)
-			if err != nil {
-				slog.Info("failed to enrich machine network", slog.String("machine-id", machine.ID))
-			}
-		}
-
-		s.lock.Lock()
-		s.machines[machine.ID] = machine
-		s.lock.Unlock()
-		slog.Info("register recovered machine", slog.String("machine-id", machine.ID))
-	}
+	//recoveredMachines, err := s.runtimeProvider.RecoverRunningMachines(ctx)
+	//if err != nil {
+	//	return fmt.Errorf("failed to recover running machines: %w", err)
+	//}
+	//
+	//for _, machine := range recoveredMachines {
+	//	if machine.NetworkInterface != nil {
+	//		machine.NetworkInterface, err = s.networkProvider.GetInterface(machine.NetworkInterface.Name)
+	//		if err != nil {
+	//			slog.Info("failed to enrich machine network", slog.String("machine-id", machine.ID))
+	//		}
+	//	}
+	//
+	//	slog.Info("register recovered machine", slog.String("machine-id", machine.ID))
+	//}
 
 	registerCtx, cancelRegisterCtx := context.WithCancel(context.Background())
 	s.cancelRegisterCtx = cancelRegisterCtx

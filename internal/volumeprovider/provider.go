@@ -5,17 +5,20 @@ import (
 	"context"
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/types"
+	"gorm.io/gorm"
 	"os/exec"
 )
 
 type Provider struct {
+	db          *gorm.DB
 	volumeGroup string
 }
 
 var _ types.VolumeProvider = (*Provider)(nil)
 
-func New(volumeGroup string) *Provider {
+func New(db *gorm.DB, volumeGroup string) *Provider {
 	return &Provider{
+		db:          db,
 		volumeGroup: volumeGroup,
 	}
 }

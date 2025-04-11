@@ -16,9 +16,13 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 	"go.uber.org/fx"
 	"golang.org/x/net/http2"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 )
@@ -26,6 +30,7 @@ import (
 func main() {
 	fx.New(
 		fx.Provide(provideConfig),
+		fx.Provide(provideGORM),
 		fx.Provide(fx.Annotate(networkprovider.New, fx.As(new(types.NetworkProvider)))),
 		fx.Provide(provideVolumeProvider),
 		fx.Provide(provideRuntimeProvider),
@@ -102,32 +107,47 @@ func provideConfig() (*types.NodeServerConfig, error) {
 	if config.BootstrapToken == "" {
 		return nil, errors.New("NODE_BOOTSTRAP_TOKEN env variable required")
 	}
-
 	if !filepath.IsAbs(config.InitBinary) {
-		path, err := filepath.Abs(config.InitBinary)
+		absPath, err := filepath.Abs(config.InitBinary)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get absolute path of init binary: %w", err)
 		}
-		config.InitBinary = path
+		config.InitBinary = absPath
 	}
 	if !filepath.IsAbs(config.StorageDirectory) {
-		path, err := filepath.Abs(config.StorageDirectory)
+		absPath, err := filepath.Abs(config.StorageDirectory)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get absolute path of the storage directory: %w", err)
 		}
-		config.StorageDirectory = path
+		config.StorageDirectory = absPath
 	}
 
 	return &config, nil
 }
 
-func provideVolumeProvider() types.VolumeProvider {
+func provideGORM(config *types.NodeServerConfig) (*gorm.DB, error) {
+	dbName := "node.db?_busy_timeout=5000&_journal_mode=WAL&_synchronous=NORMAL"
+	db, err := gorm.Open(sqlite.Open(path.Join(config.StorageDirectory, dbName)), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.AutoMigrate(&types.Machine{}, &types.Volume{}, &types.NetworkInterface{})
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
+func provideVolumeProvider(db *gorm.DB) types.VolumeProvider {
 	vg := os.Getenv("NODE_VOLUME_GROUP")
 	if vg == "" {
 		vg = "vg_baepo"
 	}
 
-	return volumeprovider.New(vg)
+	return volumeprovider.New(db, vg)
 }
 
 func provideRuntimeProvider(config *types.NodeServerConfig) types.RuntimeProvider {

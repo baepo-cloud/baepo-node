@@ -21,14 +21,18 @@ func (s *Server) StartMachine(ctx context.Context, req *connect.Request[v1pb.Nod
 		return nil, err
 	}
 
+	machinePb := &v1pb.NodeMachine{
+		MachineId:    machine.ID,
+		State:        v1pb.NodeMachineState_NodeMachineState_Running,
+		TapInterface: machine.NetworkInterface.Name,
+		MacAddress:   machine.NetworkInterface.MacAddress.String(),
+		IpAddress:    machine.NetworkInterface.IPAddress.String(),
+	}
+	if machine.RuntimePID != nil {
+		machinePb.Pid = int64(*machine.RuntimePID)
+	}
+
 	return connect.NewResponse(&v1pb.NodeStartMachineReply{
-		Machine: &v1pb.NodeMachine{
-			MachineId:    machine.ID,
-			State:        v1pb.NodeMachineState_NodeMachineState_Running,
-			Pid:          int64(machine.RuntimePID),
-			TapInterface: machine.NetworkInterface.Name,
-			MacAddress:   machine.NetworkInterface.MacAddress.String(),
-			IpAddress:    machine.NetworkInterface.IPAddress.String(),
-		},
+		Machine: machinePb,
 	}), nil
 }

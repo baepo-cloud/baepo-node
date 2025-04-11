@@ -8,12 +8,26 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"log/slog"
 	"strings"
+	"time"
 )
 
-func (s *Service) StartMachine(ctx context.Context, opts types.NodeStartMachineOptions) (*types.Machine, error) {
-	slog.Info("starting machine", slog.String("machine-id", opts.MachineID))
-	machine := &types.Machine{
-		ID: opts.MachineID,
+func (s *Service) StartMachine(ctx context.Context, opts types.NodeStartMachineOptions) (machine *types.Machine, err error) {
+	startedAt := time.Now()
+	log := slog.With(slog.String("machine-id", opts.MachineID))
+	log.Info("starting machine")
+
+	defer func() {
+		log = log.With(slog.Duration("duration", time.Now().Sub(startedAt)))
+		if err != nil {
+			log.Error("failed to start machine", slog.Any("error", err))
+		} else {
+			log.Info("machine started")
+		}
+	}()
+
+	machine = &types.Machine{
+		ID:     opts.MachineID,
+		Status: types.MachineStatusStarting,
 		Spec: &types.MachineSpec{
 			Image:    opts.Spec.Image,
 			Vcpus:    opts.Spec.Vcpus,
@@ -21,7 +35,11 @@ func (s *Service) StartMachine(ctx context.Context, opts types.NodeStartMachineO
 			Env:      map[string]string{},
 		},
 	}
+	if err = s.db.WithContext(ctx).Save(&machine).Error; err != nil {
+		return nil, fmt.Errorf("failed to save machine: %w", err)
+	}
 
+	log.Info("fetching machine image")
 	imageRef, err := name.ParseReference(machine.Spec.Image)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse image reference: %w", err)
@@ -51,31 +69,44 @@ func (s *Service) StartMachine(ctx context.Context, opts types.NodeStartMachineO
 	}
 	machine.Spec.Command = append(imageConfigFile.Config.Entrypoint, imageConfigFile.Config.Cmd...)
 
+	log.Info("creating machine volume")
 	volume, err := s.volumeProvider.CreateVolume(ctx, image)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create machine volume: %w", err)
 	}
 	machine.Volume = volume
 
-	machineNetwork, err := s.networkProvider.AllocateInterface()
+	machine.Volume.MachineID = machine.ID
+	if err = s.db.WithContext(ctx).Save(&machine.Volume).Error; err != nil {
+		return nil, fmt.Errorf("failed to save volume: %w", err)
+	}
+
+	log.Info("creating machine network")
+	machineNetwork, err := s.networkProvider.AllocateInterface(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to allocate machine network: %w", err)
 	}
 	machine.NetworkInterface = machineNetwork
 
-	machine.RuntimePID, err = s.runtimeProvider.Create(ctx, machine)
+	machine.NetworkInterface.MachineID = machine.ID
+	if err = s.db.WithContext(ctx).Save(&machine.NetworkInterface).Error; err != nil {
+		return nil, fmt.Errorf("failed to save network: %w", err)
+	}
+
+	log.Info("creating machine runtime")
+	pid, err := s.runtimeProvider.Create(ctx, machine)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create machine: %w", err)
 	}
+	machine.RuntimePID = &pid
+	if err = s.db.WithContext(ctx).Save(&machine).Error; err != nil {
+		return nil, fmt.Errorf("failed to save machine: %w", err)
+	}
 
+	log.Info("booting machine")
 	err = s.runtimeProvider.Boot(ctx, machine)
 	if err != nil {
 		return nil, fmt.Errorf("failed to boot machine: %w", err)
 	}
-
-	s.lock.Lock()
-	s.machines[machine.ID] = machine
-	s.lock.Unlock()
-
 	return machine, nil
 }

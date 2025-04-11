@@ -23,7 +23,7 @@ func (s *Server) Handler() http.Handler {
 		} else if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
-		} else if machine.NetworkInterface == nil { // todo: || machine.Status != types.MachineStateRunning
+		} else if machine.NetworkInterface == nil || machine.Status != types.MachineStatusRunning {
 			w.WriteHeader(http.StatusBadGateway)
 			return
 		}

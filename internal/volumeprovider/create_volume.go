@@ -34,18 +34,21 @@ func (p *Provider) CreateVolume(ctx context.Context, image v1.Image) (*types.Vol
 	volume := &types.Volume{
 		ID:       cuid2.Generate(),
 		ReadOnly: false,
+		Size:     uint64((imgSize / 1024 / 1024) + 1024), // img size in mb + 1GiB,
+	}
+	volume.Path = fmt.Sprintf("/dev/%v/%v", p.volumeGroup, volume.ID)
+	if err = p.db.WithContext(ctx).Create(&volume).Error; err != nil {
+		return nil, fmt.Errorf("failed to create volume in database: %w", err)
 	}
 
-	volumeSizeMB := (imgSize / 1024 / 1024) + 1024 // img size in mb + 1GiB
 	err = p.runCmd(ctx, "/usr/bin/lvcreate",
-		"-y", "--virtualsize", fmt.Sprintf("%vM", volumeSizeMB), "--thin",
+		"-y", "--virtualsize", fmt.Sprintf("%vM", volume.Size), "--thin",
 		"-n", volume.ID, fmt.Sprintf("%v/thinpool", p.volumeGroup),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create logical volume: %w", err)
 	}
 
-	volume.Path = fmt.Sprintf("/dev/%v/%v", p.volumeGroup, volume.ID)
 	err = p.runCmd(ctx, "mkfs.ext4", volume.Path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create volume fs: %w", err)

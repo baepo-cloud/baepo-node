@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/baepo-cloud/baepo-node/internal/types"
 	"github.com/baepo-cloud/baepo-node/internal/typeutil"
 	v1pb "github.com/baepo-cloud/baepo-proto/go/baepo/api/v1"
 	"github.com/shirou/gopsutil/v3/cpu"
@@ -72,7 +73,7 @@ func (s *Service) registerNode(ctx context.Context) error {
 	statsTicker := time.NewTicker(30 * time.Second)
 	defer statsTicker.Stop()
 
-	if err = s.sendStatsEvent(stream); err != nil {
+	if err = s.sendStatsEvent(ctx, stream); err != nil {
 		return err
 	}
 
@@ -81,14 +82,14 @@ func (s *Service) registerNode(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-statsTicker.C:
-			if err = s.sendStatsEvent(stream); err != nil {
+			if err = s.sendStatsEvent(ctx, stream); err != nil {
 				return err
 			}
 		}
 	}
 }
 
-func (s *Service) sendStatsEvent(stream *connect.BidiStreamForClient[v1pb.NodeControllerConnectClientEvent, v1pb.NodeControllerConnectServerEvent]) error {
+func (s *Service) sendStatsEvent(ctx context.Context, stream *connect.BidiStreamForClient[v1pb.NodeControllerConnectClientEvent, v1pb.NodeControllerConnectServerEvent]) error {
 	memInfo, err := mem.VirtualMemory()
 	if err != nil {
 		return err
@@ -99,9 +100,16 @@ func (s *Service) sendStatsEvent(stream *connect.BidiStreamForClient[v1pb.NodeCo
 		return err
 	}
 
+	var machines []*types.Machine
+	err = s.db.WithContext(ctx).Find(&machines, "status NOT IN ? AND terminated_at IS NULL",
+		[]types.MachineStatus{types.MachineStatusTerminating, types.MachineStatusTerminated}).Error
+	if err != nil {
+		return err
+	}
+
 	var runningMachineIDs []string
 	reservedMemory := uint64(0)
-	for _, machine := range s.machines {
+	for _, machine := range machines {
 		runningMachineIDs = append(runningMachineIDs, machine.ID)
 		reservedMemory += machine.Spec.MemoryMB
 	}
@@ -109,8 +117,8 @@ func (s *Service) sendStatsEvent(stream *connect.BidiStreamForClient[v1pb.NodeCo
 	return stream.Send(&v1pb.NodeControllerConnectClientEvent{
 		Event: &v1pb.NodeControllerConnectClientEvent_Stats{
 			Stats: &v1pb.NodeControllerConnectClientEvent_StatsEvent{
-				TotalMemory:       memInfo.Total,
-				UsedMemory:        memInfo.Used,
+				TotalMemory:       memInfo.Total / 1024 / 1024,
+				UsedMemory:        memInfo.Used / 1024 / 1024,
 				CpuCount:          uint32(len(cpuInfo)),
 				RunningMachineIds: runningMachineIDs,
 				ReservedMemory:    reservedMemory,

@@ -1,19 +1,24 @@
 package types
 
 import (
+	"database/sql/driver"
+	"encoding/json"
 	"errors"
+	"time"
 )
 
 type (
 	MachineStatus string
 
 	Machine struct {
-		ID               string
+		ID               string `gorm:"primaryKey"`
 		Status           MachineStatus
-		RuntimePID       int
+		RuntimePID       *int `gorm:"column:runtime_pid"`
 		Spec             *MachineSpec
 		Volume           *Volume
 		NetworkInterface *NetworkInterface
+		CreatedAt        time.Time
+		TerminatedAt     *time.Time
 	}
 
 	MachineSpec struct {
@@ -28,7 +33,6 @@ type (
 )
 
 const (
-	MachineStatusScheduling  MachineStatus = "scheduling"
 	MachineStatusStarting    MachineStatus = "starting"
 	MachineStatusRunning     MachineStatus = "running"
 	MachineStatusTerminating MachineStatus = "terminating"
@@ -36,3 +40,15 @@ const (
 )
 
 var ErrMachineNotFound = errors.New("machine not found")
+
+func (*MachineSpec) GormDataType() string {
+	return "jsonb"
+}
+
+func (s *MachineSpec) Scan(value interface{}) error {
+	return json.Unmarshal(value.([]byte), &s)
+}
+
+func (s *MachineSpec) Value() (driver.Value, error) {
+	return json.Marshal(s)
+}

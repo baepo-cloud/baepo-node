@@ -48,14 +48,14 @@ func (p *Provider) SetupBridge(externalInterface string) (netlink.Link, error) {
 		return nil, fmt.Errorf("failed to setup IP forwarding: %w", err)
 	}
 
-	if err = p.setupBridgeFirewallRules(externalInterface); err != nil {
+	if err = p.applyBridgeFirewallRules(externalInterface); err != nil {
 		return nil, fmt.Errorf("failed to setup firewall rules: %w", err)
 	}
 
 	return bridge, nil
 }
 
-func (p *Provider) setupBridgeFirewallRules(externalInterface string) error {
+func (p *Provider) applyBridgeFirewallRules(externalInterface string) error {
 	// NAT for external access
 	err := p.upsertIptablesRule("nat", "POSTROUTING",
 		"-s", p.networkCIDR.String(),

@@ -1,14 +1,17 @@
 package apiserver
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/types"
 	"github.com/baepo-cloud/baepo-proto/go/baepo/node/v1/v1connect"
+	"github.com/expected-so/canonicallog"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 type Server struct {
@@ -65,4 +68,21 @@ func (s *Server) Start(ctx context.Context) error {
 func (s *Server) Stop(ctx context.Context) error {
 	slog.Info("shutting down api server")
 	return s.httpServer.Shutdown(ctx)
+}
+
+func (s *Server) newLoggerUnaryInterceptor() connect.UnaryInterceptorFunc {
+	return func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, request connect.AnyRequest) (connect.AnyResponse, error) {
+			logContext := canonicallog.NewLogLine(ctx)
+			startedAt := time.Now()
+			canonicallog.LogAttr(logContext, slog.String("procedure", request.Spec().Procedure))
+
+			res, err := next(logContext, request)
+
+			canonicallog.LogDuration(logContext, time.Now().Sub(startedAt))
+			canonicallog.PrintLine(logContext, "api-request")
+
+			return res, err
+		}
+	}
 }
