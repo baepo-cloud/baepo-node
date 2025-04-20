@@ -51,21 +51,26 @@ func New(
 func (s *Service) Start(ctx context.Context) error {
 	slog.Info("registering node...")
 
-	//recoveredMachines, err := s.runtimeProvider.RecoverRunningMachines(ctx)
-	//if err != nil {
-	//	return fmt.Errorf("failed to recover running machines: %w", err)
-	//}
-	//
-	//for _, machine := range recoveredMachines {
-	//	if machine.NetworkInterface != nil {
-	//		machine.NetworkInterface, err = s.networkProvider.GetInterface(machine.NetworkInterface.Name)
-	//		if err != nil {
-	//			slog.Info("failed to enrich machine network", slog.String("machine-id", machine.ID))
-	//		}
-	//	}
-	//
-	//	slog.Info("register recovered machine", slog.String("machine-id", machine.ID))
-	//}
+	var machines []*types.Machine
+	err := s.db.WithContext(ctx).
+		Joins("Volume").
+		Joins("NetworkInterface").
+		Where("machines.status NOT IN ?", []types.MachineStatus{types.MachineStatusTerminated}).
+		Find(&machines).
+		Error
+	if err != nil {
+		return fmt.Errorf("failed to retrieve machines")
+	}
+
+	for _, machine := range machines {
+		if machine.Status == types.MachineStatusTerminating {
+			if _, err = s.StopMachine(ctx, machine.ID); err != nil {
+				return fmt.Errorf("failed to stop machine: %w", err)
+			}
+			continue
+		}
+
+	}
 
 	registerCtx, cancelRegisterCtx := context.WithCancel(context.Background())
 	s.cancelRegisterCtx = cancelRegisterCtx

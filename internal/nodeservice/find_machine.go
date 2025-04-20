@@ -13,7 +13,7 @@ func (s *Service) FindMachine(ctx context.Context, machineID string) (*types.Mac
 	err := s.db.WithContext(ctx).
 		Joins("Volume").
 		Joins("NetworkInterface").
-		First(&machine, "id = ?", machineID).
+		First(&machine, "machines.id = ?", machineID).
 		Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, types.ErrMachineNotFound
