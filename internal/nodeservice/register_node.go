@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/baepo-cloud/baepo-node/internal/types"
 	"github.com/baepo-cloud/baepo-node/internal/typeutil"
 	v1pb "github.com/baepo-cloud/baepo-proto/go/baepo/api/v1"
 	"github.com/shirou/gopsutil/v3/cpu"
@@ -100,18 +99,13 @@ func (s *Service) sendStatsEvent(ctx context.Context, stream *connect.BidiStream
 		return err
 	}
 
-	var machines []*types.Machine
-	err = s.db.WithContext(ctx).Find(&machines, "status NOT IN ? AND terminated_at IS NULL",
-		[]types.MachineStatus{types.MachineStatusTerminating, types.MachineStatusTerminated}).Error
-	if err != nil {
-		return err
-	}
-
+	s.machineControllerLock.RLock()
+	defer s.machineControllerLock.RUnlock()
 	var runningMachineIDs []string
 	reservedMemory := uint64(0)
-	for _, machine := range machines {
-		runningMachineIDs = append(runningMachineIDs, machine.ID)
-		reservedMemory += machine.Spec.MemoryMB
+	for machineID, ctrl := range s.machineControllers {
+		runningMachineIDs = append(runningMachineIDs, machineID)
+		reservedMemory += ctrl.GetMachine().Spec.MemoryMB
 	}
 
 	return stream.Send(&v1pb.NodeControllerConnectClientEvent{

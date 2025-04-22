@@ -1936,7 +1936,7 @@ type PutVmAddDeviceResponse struct {
 	JSON200      *PciDeviceInfo
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PutVmAddDeviceResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -1958,7 +1958,7 @@ type PutVmAddDiskResponse struct {
 	JSON200      *PciDeviceInfo
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PutVmAddDiskResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -1980,7 +1980,7 @@ type PutVmAddFsResponse struct {
 	JSON200      *PciDeviceInfo
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PutVmAddFsResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2002,7 +2002,7 @@ type PutVmAddNetResponse struct {
 	JSON200      *PciDeviceInfo
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PutVmAddNetResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2024,7 +2024,7 @@ type PutVmAddPmemResponse struct {
 	JSON200      *PciDeviceInfo
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PutVmAddPmemResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2046,7 +2046,7 @@ type PutVmAddUserDeviceResponse struct {
 	JSON200      *PciDeviceInfo
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PutVmAddUserDeviceResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2068,7 +2068,7 @@ type PutVmAddVdpaResponse struct {
 	JSON200      *PciDeviceInfo
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PutVmAddVdpaResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2090,7 +2090,7 @@ type PutVmAddVsockResponse struct {
 	JSON200      *PciDeviceInfo
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PutVmAddVsockResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2111,7 +2111,7 @@ type BootVMResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r BootVMResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2132,7 +2132,7 @@ type PutVmCoredumpResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PutVmCoredumpResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2154,7 +2154,7 @@ type GetVmCountersResponse struct {
 	JSON200      *VmCounters
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r GetVmCountersResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2175,7 +2175,7 @@ type CreateVMResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r CreateVMResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2196,7 +2196,7 @@ type DeleteVMResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r DeleteVMResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2218,7 +2218,7 @@ type GetVmInfoResponse struct {
 	JSON200      *VmInfo
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r GetVmInfoResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2239,7 +2239,7 @@ type PauseVMResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PauseVMResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2260,7 +2260,7 @@ type PowerButtonVMResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PowerButtonVMResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2281,7 +2281,7 @@ type RebootVMResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r RebootVMResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2302,7 +2302,7 @@ type PutVmReceiveMigrationResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PutVmReceiveMigrationResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2323,7 +2323,7 @@ type PutVmRemoveDeviceResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PutVmRemoveDeviceResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2344,7 +2344,7 @@ type PutVmResizeResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PutVmResizeResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2365,7 +2365,7 @@ type PutVmResizeZoneResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PutVmResizeZoneResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2386,7 +2386,7 @@ type PutVmRestoreResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PutVmRestoreResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2407,7 +2407,7 @@ type ResumeVMResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r ResumeVMResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2428,7 +2428,7 @@ type PutVmSendMigrationResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PutVmSendMigrationResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2449,7 +2449,7 @@ type ShutdownVMResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r ShutdownVMResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2470,7 +2470,7 @@ type PutVmSnapshotResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PutVmSnapshotResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2491,7 +2491,7 @@ type PutVmmNmiResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r PutVmmNmiResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2513,7 +2513,7 @@ type GetVmmPingResponse struct {
 	JSON200      *VmmPingResponse
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r GetVmmPingResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
@@ -2534,7 +2534,7 @@ type ShutdownVMMResponse struct {
 	HTTPResponse *http.Response
 }
 
-// Status returns HTTPResponse.Status
+// Status returns HTTPResponse.State
 func (r ShutdownVMMResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status

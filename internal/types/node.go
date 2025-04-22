@@ -35,8 +35,6 @@ type (
 
 		FindMachine(ctx context.Context, machineID string) (*Machine, error)
 
-		HealthcheckMachine(ctx context.Context, machineID string) (*Machine, error)
-
 		StartMachine(ctx context.Context, opts NodeStartMachineOptions) (*Machine, error)
 
 		StopMachine(ctx context.Context, machineID string) (*Machine, error)

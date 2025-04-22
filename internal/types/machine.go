@@ -8,11 +8,14 @@ import (
 )
 
 type (
-	MachineStatus string
+	MachineState string
+
+	MachineDesiredState string
 
 	Machine struct {
 		ID               string `gorm:"primaryKey"`
-		Status           MachineStatus
+		State            MachineState
+		DesiredState     MachineDesiredState
 		RuntimePID       *int `gorm:"column:runtime_pid"`
 		Spec             *MachineSpec
 		Volume           *Volume
@@ -33,10 +36,17 @@ type (
 )
 
 const (
-	MachineStatusStarting    MachineStatus = "starting"
-	MachineStatusRunning     MachineStatus = "running"
-	MachineStatusTerminating MachineStatus = "terminating"
-	MachineStatusTerminated  MachineStatus = "terminated"
+	MachineStatePending     MachineState = "pending"
+	MachineStateStarting    MachineState = "starting"
+	MachineStateRunning     MachineState = "running"
+	MachineStateDegraded    MachineState = "degraded"
+	MachineStateError       MachineState = "error"
+	MachineStateTerminating MachineState = "terminating"
+	MachineStateTerminated  MachineState = "terminated"
+
+	MachineDesiredStatePending    MachineDesiredState = "pending"
+	MachineDesiredStateRunning    MachineDesiredState = "running"
+	MachineDesiredStateTerminated MachineDesiredState = "terminated"
 )
 
 var ErrMachineNotFound = errors.New("machine not found")
@@ -51,4 +61,17 @@ func (s *MachineSpec) Scan(value interface{}) error {
 
 func (s *MachineSpec) Value() (driver.Value, error) {
 	return json.Marshal(s)
+}
+
+func (s MachineState) MatchDesiredState(desired MachineDesiredState) bool {
+	switch s {
+	case MachineStatePending:
+		return desired == MachineDesiredStatePending
+	case MachineStateStarting, MachineStateRunning, MachineStateDegraded:
+		return desired == MachineDesiredStateRunning
+	case MachineStateTerminating, MachineStateTerminated:
+		return desired == MachineDesiredStateTerminated
+	default:
+		return false
+	}
 }

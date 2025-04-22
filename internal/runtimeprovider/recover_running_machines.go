@@ -66,7 +66,7 @@ func (p *Provider) recoverMachine(ctx context.Context, machineID string) (*types
 
 	machine := &types.Machine{
 		ID:         machineID,
-		Status:     types.MachineStatusRunning,
+		State:      types.MachineStateRunning,
 		RuntimePID: typeutil.Ptr(int(*pingRes.JSON200.Pid)),
 	}
 

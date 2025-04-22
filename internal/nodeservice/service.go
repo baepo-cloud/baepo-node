@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/baepo-cloud/baepo-node/internal/nodeservice/machinecontroller"
 	"github.com/baepo-cloud/baepo-node/internal/types"
 	"github.com/baepo-cloud/baepo-proto/go/baepo/api/v1/v1connect"
 	"gorm.io/gorm"
@@ -16,16 +17,18 @@ import (
 )
 
 type Service struct {
-	db                *gorm.DB
-	apiClient         v1connect.NodeControllerServiceClient
-	volumeProvider    types.VolumeProvider
-	networkProvider   types.NetworkProvider
-	runtimeProvider   types.RuntimeProvider
-	config            *types.NodeServerConfig
-	authorityCert     *x509.Certificate
-	tlsCert           *tls.Certificate
-	lock              *sync.Mutex
-	cancelRegisterCtx func()
+	log                   *slog.Logger
+	db                    *gorm.DB
+	apiClient             v1connect.NodeControllerServiceClient
+	volumeProvider        types.VolumeProvider
+	networkProvider       types.NetworkProvider
+	runtimeProvider       types.RuntimeProvider
+	config                *types.NodeServerConfig
+	authorityCert         *x509.Certificate
+	tlsCert               *tls.Certificate
+	cancelRegisterCtx     func()
+	machineControllerLock sync.RWMutex
+	machineControllers    map[string]*machinecontroller.Controller
 }
 
 var _ types.NodeService = (*Service)(nil)
@@ -39,37 +42,21 @@ func New(
 	config *types.NodeServerConfig,
 ) *Service {
 	return &Service{
-		db:              db,
-		apiClient:       apiClient,
-		volumeProvider:  volumeProvider,
-		networkProvider: networkProvider,
-		runtimeProvider: runtimeProvider,
-		config:          config,
+		log:                   slog.With(slog.String("component", "nodeservice")),
+		db:                    db,
+		apiClient:             apiClient,
+		volumeProvider:        volumeProvider,
+		networkProvider:       networkProvider,
+		runtimeProvider:       runtimeProvider,
+		config:                config,
+		machineControllerLock: sync.RWMutex{},
+		machineControllers:    map[string]*machinecontroller.Controller{},
 	}
 }
 
 func (s *Service) Start(ctx context.Context) error {
-	slog.Info("registering node...")
-
-	var machines []*types.Machine
-	err := s.db.WithContext(ctx).
-		Joins("Volume").
-		Joins("NetworkInterface").
-		Where("machines.status NOT IN ?", []types.MachineStatus{types.MachineStatusTerminated}).
-		Find(&machines).
-		Error
-	if err != nil {
-		return fmt.Errorf("failed to retrieve machines")
-	}
-
-	for _, machine := range machines {
-		if machine.Status == types.MachineStatusTerminating {
-			if _, err = s.StopMachine(ctx, machine.ID); err != nil {
-				return fmt.Errorf("failed to stop machine: %w", err)
-			}
-			continue
-		}
-
+	if err := s.loadMachines(ctx); err != nil {
+		return fmt.Errorf("failed to load machines: %w", err)
 	}
 
 	registerCtx, cancelRegisterCtx := context.WithCancel(context.Background())
