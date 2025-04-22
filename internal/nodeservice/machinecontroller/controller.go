@@ -9,17 +9,18 @@ import (
 )
 
 type Controller struct {
-	log              *slog.Logger
-	db               *gorm.DB
-	volumeProvider   types.VolumeProvider
-	networkProvider  types.NetworkProvider
-	runtimeProvider  types.RuntimeProvider
-	machine          *types.Machine
-	cancelWatch      context.CancelFunc
-	cancelMonitoring context.CancelFunc
-	desiredStateChan chan types.MachineDesiredState
-	currentStateChan chan types.MachineState
-
+	log                  *slog.Logger
+	db                   *gorm.DB
+	volumeProvider       types.VolumeProvider
+	networkProvider      types.NetworkProvider
+	runtimeProvider      types.RuntimeProvider
+	machine              *types.Machine
+	cancelWatch          context.CancelFunc
+	cancelMonitoring     context.CancelFunc
+	monitoringMutex      sync.Mutex
+	desiredStateChan     chan types.MachineDesiredState
+	currentStateChan     chan types.MachineState
+	machineMutex         sync.RWMutex
 	reconcileToState     types.MachineDesiredState
 	reconciliationMutex  sync.Mutex
 	cancelReconciliation func()
@@ -36,14 +37,13 @@ func New(
 		log: slog.With(
 			slog.String("component", "machinecontroller"),
 			slog.String("machine-id", machine.ID)),
-		db:                  db,
-		volumeProvider:      volumeProvider,
-		networkProvider:     networkProvider,
-		runtimeProvider:     runtimeProvider,
-		machine:             machine,
-		desiredStateChan:    make(chan types.MachineDesiredState),
-		currentStateChan:    make(chan types.MachineState),
-		reconciliationMutex: sync.Mutex{},
+		db:               db,
+		volumeProvider:   volumeProvider,
+		networkProvider:  networkProvider,
+		runtimeProvider:  runtimeProvider,
+		machine:          machine,
+		desiredStateChan: make(chan types.MachineDesiredState),
+		currentStateChan: make(chan types.MachineState),
 	}
 
 	watchCtx, cancelWatch := context.WithCancel(context.Background())
@@ -57,7 +57,7 @@ func (c *Controller) watchStateChanges(ctx context.Context) {
 	if !c.machine.State.MatchDesiredState(c.machine.DesiredState) {
 		go c.startReconciliation()
 	}
-	
+
 	c.syncMonitoring()
 
 	for {
@@ -65,26 +65,36 @@ func (c *Controller) watchStateChanges(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case desiredState := <-c.desiredStateChan:
-			c.machine.DesiredState = desiredState
-			if err := c.db.WithContext(ctx).Select("DesiredState").Save(c.machine).Error; err != nil {
+			err := c.updateMachine(func(machine *types.Machine) error {
+				machine.DesiredState = desiredState
+				return c.db.WithContext(ctx).Select("DesiredState").Save(machine).Error
+			})
+			if err != nil {
 				c.log.Error("failed to update machine desired state",
 					slog.String("desired-state", string(desiredState)),
 					slog.Any("error", err))
 			}
-			if !c.machine.State.MatchDesiredState(c.machine.DesiredState) {
+
+			machine := c.GetMachine()
+			if !machine.State.MatchDesiredState(machine.DesiredState) {
 				go c.startReconciliation()
 			}
 		case state := <-c.currentStateChan:
-			c.machine.State = state
-			if err := c.db.WithContext(ctx).Select("State").Save(c.machine).Error; err != nil {
+			err := c.updateMachine(func(machine *types.Machine) error {
+				machine.State = state
+				return c.db.WithContext(ctx).Select("State").Save(machine).Error
+			})
+			if err != nil {
 				c.log.Error("failed to update machine state",
 					slog.String("state", string(state)),
 					slog.Any("error", err))
-			} else if c.machine.State == types.MachineStateTerminated {
+			}
+
+			machine := c.GetMachine()
+			if machine.State == types.MachineStateTerminated {
 				c.Stop()
 				return
-			}
-			if !c.machine.State.MatchDesiredState(c.machine.DesiredState) {
+			} else if !machine.State.MatchDesiredState(machine.DesiredState) {
 				go c.startReconciliation()
 			}
 		}
@@ -92,16 +102,44 @@ func (c *Controller) watchStateChanges(ctx context.Context) {
 }
 
 func (c *Controller) GetMachine() *types.Machine {
-	return c.machine
+	c.machineMutex.RLock()
+	defer c.machineMutex.RUnlock()
+
+	copiedMachine := *c.machine
+	return &copiedMachine
 }
 
 func (c *Controller) UpdateDesiredState(desiredState types.MachineDesiredState) {
-	c.desiredStateChan <- desiredState
+	machine := c.GetMachine()
+	if machine.DesiredState != desiredState {
+		c.desiredStateChan <- desiredState
+	}
+}
+
+func (c *Controller) updateCurrentState(state types.MachineState) {
+	machine := c.GetMachine()
+	if machine.State != state {
+		c.currentStateChan <- state
+	}
 }
 
 func (c *Controller) Stop() {
+	c.monitoringMutex.Lock()
+	defer c.monitoringMutex.Unlock()
+	c.reconciliationMutex.Lock()
+	defer c.reconciliationMutex.Unlock()
+
 	c.cancelWatch()
 	if c.cancelMonitoring != nil {
 		c.cancelMonitoring()
 	}
+	if c.cancelReconciliation != nil {
+		c.cancelReconciliation()
+	}
+}
+
+func (c *Controller) updateMachine(handler func(machine *types.Machine) error) error {
+	c.machineMutex.Lock()
+	defer c.machineMutex.Unlock()
+	return handler(c.machine)
 }

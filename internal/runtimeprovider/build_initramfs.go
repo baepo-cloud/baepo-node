@@ -12,23 +12,23 @@ import (
 	"path/filepath"
 )
 
-func (p *Provider) BuildInitRamFS(ctx context.Context, machine *types.Machine) error {
+func (p *Provider) BuildInitRamFS(ctx context.Context, opts types.RuntimeCreateOptions) error {
 	tmpDir, err := os.MkdirTemp("", "baepo-*")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(tmpDir)
 
-	maskSize, _ := machine.NetworkInterface.NetworkCIDR.Mask.Size()
+	maskSize, _ := opts.NetworkInterface.NetworkCIDR.Mask.Size()
 	initConfig := initd.Config{
-		IPAddress:      fmt.Sprintf("%s/%d", machine.NetworkInterface.IPAddress.String(), maskSize),
-		MacAddress:     machine.NetworkInterface.MacAddress.String(),
-		GatewayAddress: machine.NetworkInterface.GatewayAddress.String(),
-		Env:            machine.Spec.Env,
-		User:           machine.Spec.User,
-		WorkingDir:     machine.Spec.WorkingDir,
-		Command:        machine.Spec.Command,
-		Hostname:       machine.ID,
+		IPAddress:      fmt.Sprintf("%s/%d", opts.NetworkInterface.IPAddress.String(), maskSize),
+		MacAddress:     opts.NetworkInterface.MacAddress.String(),
+		GatewayAddress: opts.NetworkInterface.GatewayAddress.String(),
+		Env:            opts.Spec.Env,
+		User:           opts.Spec.User,
+		WorkingDir:     opts.Spec.WorkingDir,
+		Command:        opts.Spec.Command,
+		Hostname:       opts.MachineID,
 	}
 	configFile, err := os.Create(filepath.Join(tmpDir, "config.json"))
 	if err != nil {
@@ -48,7 +48,7 @@ func (p *Provider) BuildInitRamFS(ctx context.Context, machine *types.Machine) e
 
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", fmt.Sprintf(
 		"find . -print0 | cpio --null -ov --format=newc | gzip -9 > %v",
-		p.getInitRamFSPath(machine.ID),
+		p.getInitRamFSPath(opts.MachineID),
 	))
 	cmd.Dir = tmpDir
 	if err = cmd.Run(); err != nil {

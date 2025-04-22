@@ -22,11 +22,11 @@ func (s *Server) StartMachine(ctx context.Context, req *connect.Request[v1pb.Nod
 	}
 
 	machinePb := &v1pb.NodeMachine{
-		MachineId:    machine.ID,
-		State:        v1pb.NodeMachineState_NodeMachineState_Running,
-		TapInterface: machine.NetworkInterface.Name,
-		MacAddress:   machine.NetworkInterface.MacAddress.String(),
-		IpAddress:    machine.NetworkInterface.IPAddress.String(),
+		MachineId: machine.ID,
+		State:     v1pb.NodeMachineState_NodeMachineState_Running,
+		//TapInterface: machine.NetworkInterface.Name,
+		//MacAddress:   machine.NetworkInterface.MacAddress.String(),
+		//IpAddress:    machine.NetworkInterface.IPAddress.String(),
 	}
 	if machine.RuntimePID != nil {
 		machinePb.Pid = int64(*machine.RuntimePID)

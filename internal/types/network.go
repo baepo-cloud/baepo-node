@@ -14,7 +14,7 @@ type (
 	NetworkInterface struct {
 		ID             string `gorm:"primaryKey"`
 		Name           string
-		MachineID      string
+		MachineID      *string
 		IPAddress      net.IP           `gorm:"type:text"`
 		MacAddress     net.HardwareAddr `gorm:"type:text"`
 		GatewayAddress net.IP           `gorm:"type:text"`

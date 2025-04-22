@@ -11,13 +11,14 @@ import (
 )
 
 func (c *Controller) prepareMachine(ctx context.Context) error {
-	if c.machine.Volume == nil {
+	machine := c.GetMachine()
+	if machine.Volume == nil {
 		if err := c.prepareMachineVolume(ctx); err != nil {
 			return fmt.Errorf("failed to prepare machine volume: %w", err)
 		}
 	}
 
-	if c.machine.NetworkInterface == nil {
+	if machine.NetworkInterface == nil {
 		if err := c.prepareMachineNetwork(ctx); err != nil {
 			return fmt.Errorf("failed to prepare machine network: %w", err)
 		}
@@ -27,8 +28,10 @@ func (c *Controller) prepareMachine(ctx context.Context) error {
 }
 
 func (c *Controller) prepareMachineVolume(ctx context.Context) error {
-	c.log.Info("fetching image", slog.String("image-ref", c.machine.Spec.Image))
-	imageRef, err := name.ParseReference(c.machine.Spec.Image)
+	machine := c.GetMachine()
+
+	c.log.Info("fetching image", slog.String("image-ref", machine.Spec.Image))
+	imageRef, err := name.ParseReference(machine.Spec.Image)
 	if err != nil {
 		return fmt.Errorf("failed to parse image reference: %w", err)
 	}
@@ -43,32 +46,30 @@ func (c *Controller) prepareMachineVolume(ctx context.Context) error {
 		return fmt.Errorf("failed to fetch image config file: %w", err)
 	}
 
-	c.machine.Spec.User = imageConfigFile.Config.User
-	c.machine.Spec.WorkingDir = imageConfigFile.Config.WorkingDir
-	for _, env := range imageConfigFile.Config.Env {
-		parts := strings.SplitN(env, "=", 2)
-		if len(parts) == 1 {
-			parts = append(parts, "")
-		}
-		c.machine.Spec.Env[parts[0]] = parts[1]
-	}
-	for key, value := range c.machine.Spec.Env {
-		c.machine.Spec.Env[key] = value
-	}
-	c.machine.Spec.Command = append(imageConfigFile.Config.Entrypoint, imageConfigFile.Config.Cmd...)
-
 	c.log.Info("creating machine volume")
-	c.machine.Volume, err = c.volumeProvider.CreateVolume(ctx, image)
+	volume, err := c.volumeProvider.CreateVolume(ctx, image)
 	if err != nil {
 		return fmt.Errorf("failed to create machine volume: %w", err)
 	}
 
-	c.machine.Volume.MachineID = c.machine.ID
-	err = c.db.WithContext(ctx).
-		Model(&types.Volume{}).
-		Where("id = ?", c.machine.Volume.ID).
-		Update("machine_id", c.machine.ID).
-		Error
+	err = c.updateMachine(func(machine *types.Machine) error {
+		machine.Spec.User = imageConfigFile.Config.User
+		machine.Spec.WorkingDir = imageConfigFile.Config.WorkingDir
+		for _, env := range imageConfigFile.Config.Env {
+			parts := strings.SplitN(env, "=", 2)
+			if len(parts) == 1 {
+				parts = append(parts, "")
+			}
+			machine.Spec.Env[parts[0]] = parts[1]
+		}
+		for key, value := range machine.Spec.Env {
+			machine.Spec.Env[key] = value
+		}
+		machine.Spec.Command = append(imageConfigFile.Config.Entrypoint, imageConfigFile.Config.Cmd...)
+		machine.Volume = volume
+		machine.Volume.MachineID = &machine.ID
+		return c.db.WithContext(ctx).Select("MachineID").Save(machine.Volume).Error
+	})
 	if err != nil {
 		return fmt.Errorf("failed to claim volume for a machine: %w", err)
 	}
@@ -82,13 +83,11 @@ func (c *Controller) prepareMachineNetwork(ctx context.Context) error {
 		return fmt.Errorf("failed to allocate machine network: %w", err)
 	}
 
-	machineNetwork.MachineID = c.machine.ID
-	c.machine.NetworkInterface = machineNetwork
-	err = c.db.WithContext(ctx).
-		Model(&types.NetworkInterface{}).
-		Where("id = ?", machineNetwork.ID).
-		Update("machine_id", c.machine.ID).
-		Error
+	err = c.updateMachine(func(machine *types.Machine) error {
+		machine.NetworkInterface = machineNetwork
+		machine.NetworkInterface.MachineID = &machine.ID
+		return c.db.WithContext(ctx).Select("MachineID").Save(machine.NetworkInterface).Error
+	})
 	if err != nil {
 		return fmt.Errorf("failed to claim network interface for a machine: %w", err)
 	}

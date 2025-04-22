@@ -2,14 +2,21 @@ package types
 
 import "context"
 
-type RuntimeProvider interface {
-	Create(ctx context.Context, machine *Machine) (int, error)
+type (
+	RuntimeCreateOptions struct {
+		MachineID        string
+		Spec             MachineSpec
+		Volume           Volume
+		NetworkInterface NetworkInterface
+	}
 
-	Boot(ctx context.Context, machine *Machine) error
+	RuntimeProvider interface {
+		Create(ctx context.Context, opts RuntimeCreateOptions) (int, error)
 
-	Terminate(ctx context.Context, machine *Machine) error
+		Boot(ctx context.Context, machineID string) error
 
-	Healthcheck(ctx context.Context, machine *Machine) error
+		Terminate(ctx context.Context, machineID string) error
 
-	RecoverRunningMachines(ctx context.Context) ([]*Machine, error)
-}
+		Healthcheck(ctx context.Context, machineID string) error
+	}
+)

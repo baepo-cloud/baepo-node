@@ -9,7 +9,7 @@ import (
 type (
 	Volume struct {
 		ID        string `gorm:"primaryKey"`
-		MachineID string
+		MachineID *string
 		Path      string
 		ReadOnly  bool
 		Size      uint64

@@ -3,13 +3,12 @@ package runtimeprovider
 import (
 	"context"
 	"fmt"
-	"github.com/baepo-cloud/baepo-node/internal/types"
 	"log/slog"
 	"os"
 )
 
-func (p *Provider) Terminate(ctx context.Context, machine *types.Machine) error {
-	vmmClient, err := p.newCloudHypervisorHTTPClient(machine.ID)
+func (p *Provider) Terminate(ctx context.Context, machineID string) error {
+	vmmClient, err := p.newCloudHypervisorHTTPClient(machineID)
 	if err != nil {
 		return fmt.Errorf("failed to create cloud hypervisor http client: %w", err)
 	}
@@ -19,6 +18,6 @@ func (p *Provider) Terminate(ctx context.Context, machine *types.Machine) error 
 	}
 
 	_, err = vmmClient.ShutdownVMMWithResponse(ctx)
-	_ = os.Remove(p.getInitRamFSPath(machine.ID))
+	_ = os.Remove(p.getInitRamFSPath(machineID))
 	return err
 }

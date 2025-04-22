@@ -3,12 +3,25 @@ package machinecontroller
 import (
 	"context"
 	"github.com/baepo-cloud/baepo-node/internal/types"
+	"github.com/baepo-cloud/baepo-node/internal/typeutil"
 	"log/slog"
 	"time"
 )
 
+var StatesToMonitor = []types.MachineState{
+	types.MachineStateStarting,
+	types.MachineStateRunning,
+	types.MachineStateDegraded,
+	types.MachineStateError,
+}
+
 func (c *Controller) syncMonitoring() {
-	if c.machine.State != types.MachineStateStarting && c.machine.State != types.MachineStateRunning {
+	c.monitoringMutex.Lock()
+	defer c.monitoringMutex.Unlock()
+
+	machine := c.GetMachine()
+	c.log.Debug("syncing monitoring", slog.Any("state", machine.State))
+	if !typeutil.Includes(StatesToMonitor, machine.State) {
 		if c.cancelMonitoring != nil {
 			c.cancelMonitoring()
 			c.cancelMonitoring = nil
@@ -20,10 +33,10 @@ func (c *Controller) syncMonitoring() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	c.cancelMonitoring = cancel
-	go c.monitor(ctx)
+	go c.monitor(ctx, machine.ID)
 }
 
-func (c *Controller) monitor(ctx context.Context) {
+func (c *Controller) monitor(ctx context.Context, machineID string) {
 	consecutiveError := 0
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
@@ -34,18 +47,22 @@ func (c *Controller) monitor(ctx context.Context) {
 			return
 		case <-ticker.C:
 			c.log.Debug("performing machine healthcheck")
-			if err := c.runtimeProvider.Healthcheck(ctx, c.machine); err != nil {
-				c.log.Warn("machine healthcheck failed", slog.Any("error", err))
-				consecutiveError++
+			checkCtx, cancelCheckCtx := context.WithTimeout(ctx, time.Second)
+			err := c.runtimeProvider.Healthcheck(checkCtx, machineID)
+			cancelCheckCtx()
 
+			if err != nil {
+				c.log.Warn("machine healthcheck failed", slog.Any("error", err))
+
+				consecutiveError++
 				if consecutiveError >= 3 {
-					c.currentStateChan <- types.MachineStateError
+					c.updateCurrentState(types.MachineStateError)
 				} else if consecutiveError > 0 {
-					c.currentStateChan <- types.MachineStateDegraded
+					c.updateCurrentState(types.MachineStateDegraded)
 				}
 			} else {
 				consecutiveError = 0
-				c.currentStateChan <- types.MachineStateRunning
+				c.updateCurrentState(types.MachineStateRunning)
 			}
 		}
 	}
