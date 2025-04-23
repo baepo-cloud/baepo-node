@@ -4,10 +4,8 @@ import (
 	"connectrpc.com/connect"
 	"crypto/tls"
 	"fmt"
-	"github.com/baepo-cloud/baepo-node/internal/apiserver/v1pbadapter"
 	"github.com/baepo-cloud/baepo-node/internal/typeutil"
 	apiv1pb "github.com/baepo-cloud/baepo-proto/go/baepo/api/v1"
-	nodev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/node/v1"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 	"log/slog"
@@ -134,20 +132,18 @@ func (s *Service) sendStatsEvent(stream NodeControllerStream) error {
 	s.machineControllerLock.RLock()
 	defer s.machineControllerLock.RUnlock()
 
-	machineStates := map[string]nodev1pb.MachineState{}
 	reservedMemoryMB := uint64(0)
-	for machineID, ctrl := range s.machineControllers {
-		machineStates[machineID] = v1pbadapter.MachineStateToProto(ctrl.GetMachine().State)
+	for _, ctrl := range s.machineControllers {
+		reservedMemoryMB += ctrl.GetMachine().Spec.MemoryMB
 	}
 
 	return stream.Send(&apiv1pb.NodeControllerClientEvent{
-		Event: &apiv1pb.NodeControllerClientEvent_Stats{
-			Stats: &apiv1pb.NodeControllerClientEvent_StatsEvent{
+		Event: &apiv1pb.NodeControllerClientEvent_StatsEvent{
+			StatsEvent: &apiv1pb.NodeControllerClientEvent_Stats{
 				TotalMemoryMb:    memInfo.Total / 1024 / 1024,
 				UsedMemoryMb:     memInfo.Used / 1024 / 1024,
 				ReservedMemoryMb: reservedMemoryMB,
 				CpuCount:         uint32(len(cpuInfo)),
-				MachineStates:    machineStates,
 			},
 		},
 	})
