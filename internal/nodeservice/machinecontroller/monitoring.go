@@ -38,7 +38,7 @@ func (c *Controller) syncMonitoring() {
 
 func (c *Controller) monitor(ctx context.Context, machineID string) {
 	consecutiveError := 0
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
 	for {

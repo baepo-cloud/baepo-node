@@ -26,8 +26,8 @@ func (p *Provider) Create(ctx context.Context, opts types.RuntimeCreateOptions) 
 
 	_, err = vmmClient.CreateVM(ctx, chclient.VmConfig{
 		Cpus: &chclient.CpusConfig{
-			BootVcpus: int(opts.Spec.Vcpus),
-			MaxVcpus:  int(opts.Spec.Vcpus),
+			BootVcpus: int(opts.Spec.Cpus),
+			MaxVcpus:  int(opts.Spec.Cpus),
 		},
 		Memory: &chclient.MemoryConfig{
 			Size: int64(opts.Spec.MemoryMB * 1024 * 1024), // convert Mib to bytes

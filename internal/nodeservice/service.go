@@ -13,7 +13,6 @@ import (
 	"log/slog"
 	"net"
 	"sync"
-	"time"
 )
 
 type Service struct {
@@ -26,7 +25,8 @@ type Service struct {
 	config                *types.NodeServerConfig
 	authorityCert         *x509.Certificate
 	tlsCert               *tls.Certificate
-	cancelRegisterCtx     func()
+	ctx                   context.Context
+	cancelCtx             context.CancelFunc
 	machineControllerLock sync.RWMutex
 	machineControllers    map[string]*machinecontroller.Controller
 }
@@ -59,33 +59,14 @@ func (s *Service) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to load machines: %w", err)
 	}
 
-	registerCtx, cancelRegisterCtx := context.WithCancel(context.Background())
-	s.cancelRegisterCtx = cancelRegisterCtx
-	go func() {
-		for {
-			select {
-			case <-registerCtx.Done():
-				return
-			default:
-				err := s.registerNode(registerCtx)
-				if err != nil {
-					slog.Error("failed to register node, retrying in 5 seconds...", slog.Any("error", err))
-					select {
-					case <-time.After(5 * time.Second):
-						continue
-					case <-registerCtx.Done():
-						return
-					}
-				}
-			}
-		}
-	}()
-
+	s.ctx, s.cancelCtx = context.WithCancel(context.Background())
+	go s.startGCWorker()
+	go s.startRegistrationWorker()
 	return nil
 }
 
 func (s *Service) Stop(ctx context.Context) error {
-	s.cancelRegisterCtx()
+	s.cancelCtx()
 	return nil
 }
 

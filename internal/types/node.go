@@ -19,9 +19,15 @@ type (
 		CloudHypervisorBinary string
 	}
 
-	NodeStartMachineOptions struct {
-		MachineID string
-		Spec      MachineSpec
+	NodeCreateMachineOptions struct {
+		MachineID    string
+		DesiredState MachineDesiredState
+		Spec         MachineSpec
+	}
+
+	NodeUpdateMachineDesiredStateOptions struct {
+		MachineID    string
+		DesiredState MachineDesiredState
 	}
 
 	NodeService interface {
@@ -33,10 +39,12 @@ type (
 
 		TLSCertificate() *tls.Certificate
 
+		ListMachines(ctx context.Context) ([]*Machine, error)
+
 		FindMachine(ctx context.Context, machineID string) (*Machine, error)
 
-		StartMachine(ctx context.Context, opts NodeStartMachineOptions) (*Machine, error)
+		CreateMachine(ctx context.Context, opts NodeCreateMachineOptions) (*Machine, error)
 
-		StopMachine(ctx context.Context, machineID string) (*Machine, error)
+		UpdateMachineDesiredState(ctx context.Context, opts NodeUpdateMachineDesiredStateOptions) (*Machine, error)
 	}
 )

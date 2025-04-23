@@ -11,6 +11,9 @@ import (
 )
 
 func (p *Provider) StartHypervisor(ctx context.Context, machineID string) (int, error) {
+	p.gcMutex.RLock()
+	defer p.gcMutex.RUnlock()
+
 	socketPath := p.getHypervisorSocketPath(machineID)
 	cmd := exec.Command(p.cloudHypervisorBinary, "--api-socket", socketPath)
 	cmd.SysProcAttr = &syscall.SysProcAttr{

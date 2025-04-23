@@ -26,7 +26,7 @@ type (
 
 	MachineSpec struct {
 		Image      string
-		Vcpus      uint32
+		Cpus       uint32
 		MemoryMB   uint64
 		Env        map[string]string
 		User       string

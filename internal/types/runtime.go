@@ -11,6 +11,8 @@ type (
 	}
 
 	RuntimeProvider interface {
+		GC(ctx context.Context, getExpectedMachineIDs func() []string) error
+
 		Create(ctx context.Context, opts RuntimeCreateOptions) (int, error)
 
 		Boot(ctx context.Context, machineID string) error

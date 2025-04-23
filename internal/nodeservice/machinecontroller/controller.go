@@ -8,23 +8,26 @@ import (
 	"sync"
 )
 
-type Controller struct {
-	log                  *slog.Logger
-	db                   *gorm.DB
-	volumeProvider       types.VolumeProvider
-	networkProvider      types.NetworkProvider
-	runtimeProvider      types.RuntimeProvider
-	machine              *types.Machine
-	cancelWatch          context.CancelFunc
-	cancelMonitoring     context.CancelFunc
-	monitoringMutex      sync.Mutex
-	desiredStateChan     chan types.MachineDesiredState
-	currentStateChan     chan types.MachineState
-	machineMutex         sync.RWMutex
-	reconcileToState     types.MachineDesiredState
-	reconciliationMutex  sync.Mutex
-	cancelReconciliation func()
-}
+type (
+	Controller struct {
+		log                  *slog.Logger
+		db                   *gorm.DB
+		volumeProvider       types.VolumeProvider
+		networkProvider      types.NetworkProvider
+		runtimeProvider      types.RuntimeProvider
+		machine              *types.Machine
+		cancelWatch          context.CancelFunc
+		cancelMonitoring     context.CancelFunc
+		monitoringMutex      sync.Mutex
+		desiredStateChan     chan types.MachineDesiredState
+		currentStateChan     chan types.MachineState
+		machineMutex         sync.RWMutex
+		reconcileToState     types.MachineDesiredState
+		reconciliationMutex  sync.Mutex
+		cancelReconciliation func()
+		watcher              func(machine *types.Machine)
+	}
+)
 
 func New(
 	db *gorm.DB,
@@ -32,6 +35,7 @@ func New(
 	networkProvider types.NetworkProvider,
 	runtimeProvider types.RuntimeProvider,
 	machine *types.Machine,
+	watcher func(machine *types.Machine),
 ) *Controller {
 	ctrl := &Controller{
 		log: slog.With(
@@ -44,6 +48,7 @@ func New(
 		machine:          machine,
 		desiredStateChan: make(chan types.MachineDesiredState),
 		currentStateChan: make(chan types.MachineState),
+		watcher:          watcher,
 	}
 
 	watchCtx, cancelWatch := context.WithCancel(context.Background())
@@ -76,6 +81,10 @@ func (c *Controller) watchStateChanges(ctx context.Context) {
 			}
 
 			machine := c.GetMachine()
+			if c.watcher != nil {
+				c.watcher(machine)
+			}
+			
 			if !machine.State.MatchDesiredState(machine.DesiredState) {
 				go c.startReconciliation()
 			}
@@ -91,6 +100,10 @@ func (c *Controller) watchStateChanges(ctx context.Context) {
 			}
 
 			machine := c.GetMachine()
+			if c.watcher != nil {
+				c.watcher(machine)
+			}
+
 			if machine.State == types.MachineStateTerminated {
 				c.Stop()
 				return

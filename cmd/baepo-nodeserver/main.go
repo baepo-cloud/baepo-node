@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/apiserver"
+	"github.com/baepo-cloud/baepo-node/internal/fxlog"
 	"github.com/baepo-cloud/baepo-node/internal/gatewayserver"
 	"github.com/baepo-cloud/baepo-node/internal/networkprovider"
 	"github.com/baepo-cloud/baepo-node/internal/nodeservice"
@@ -19,7 +20,6 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -29,8 +29,9 @@ import (
 )
 
 func main() {
-	slog.SetLogLoggerLevel(slog.LevelDebug)
+	//slog.SetLogLoggerLevel(slog.LevelDebug)
 	fx.New(
+		fxlog.Logger(),
 		fx.Provide(provideConfig),
 		fx.Provide(provideGORM),
 		fx.Provide(fx.Annotate(networkprovider.New, fx.As(new(types.NetworkProvider)))),

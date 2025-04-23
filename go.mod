@@ -6,7 +6,7 @@ tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
 
 require (
 	connectrpc.com/connect v1.18.1
-	github.com/baepo-cloud/baepo-proto/go v0.0.0-20250410150929-7419b7dd990a
+	github.com/baepo-cloud/baepo-proto/go v0.0.0-20250423093612-adc362d58e6c
 	github.com/expected-so/canonicallog v0.0.0-20250112093902-7d3bba85c4b9
 	github.com/google/go-containerregistry v0.20.3
 	github.com/joho/godotenv v1.5.1

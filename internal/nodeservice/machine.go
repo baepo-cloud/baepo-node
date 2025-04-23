@@ -9,7 +9,7 @@ import (
 )
 
 func (s *Service) loadMachines(ctx context.Context) error {
-	slog.Info("registering node...")
+	s.log.Info("loading machines")
 
 	var machines []*types.Machine
 	err := s.db.WithContext(ctx).
@@ -33,9 +33,12 @@ func (s *Service) loadMachines(ctx context.Context) error {
 }
 
 func (s *Service) newMachineController(machine *types.Machine) *machinecontroller.Controller {
-	ctrl := machinecontroller.New(s.db, s.volumeProvider, s.networkProvider, s.runtimeProvider, machine)
+	return machinecontroller.New(
+		s.db, s.volumeProvider, s.networkProvider, s.runtimeProvider, machine,
+		func(machine *types.Machine) {
 
-	return ctrl
+		},
+	)
 }
 
 func (s *Service) FindMachine(ctx context.Context, machineID string) (*types.Machine, error) {
@@ -50,16 +53,27 @@ func (s *Service) FindMachine(ctx context.Context, machineID string) (*types.Mac
 	return ctrl.GetMachine(), nil
 }
 
-func (s *Service) StartMachine(ctx context.Context, opts types.NodeStartMachineOptions) (*types.Machine, error) {
-	s.log.Info("requesting machine start", slog.String("machine-id", opts.MachineID))
+func (s *Service) ListMachines(ctx context.Context) ([]*types.Machine, error) {
+	s.machineControllerLock.RLock()
+	defer s.machineControllerLock.RUnlock()
+
+	var machines []*types.Machine
+	for _, ctrl := range s.machineControllers {
+		machines = append(machines, ctrl.GetMachine())
+	}
+	return machines, nil
+}
+
+func (s *Service) CreateMachine(ctx context.Context, opts types.NodeCreateMachineOptions) (*types.Machine, error) {
+	s.log.Info("requesting machine creation", slog.String("machine-id", opts.MachineID))
 
 	machine := &types.Machine{
 		ID:           opts.MachineID,
 		State:        types.MachineStatePending,
-		DesiredState: types.MachineDesiredStateRunning,
+		DesiredState: opts.DesiredState,
 		Spec: &types.MachineSpec{
 			Image:    opts.Spec.Image,
-			Vcpus:    opts.Spec.Vcpus,
+			Cpus:     opts.Spec.Cpus,
 			MemoryMB: opts.Spec.MemoryMB,
 			Env:      map[string]string{},
 		},
@@ -75,16 +89,18 @@ func (s *Service) StartMachine(ctx context.Context, opts types.NodeStartMachineO
 	return machine, nil
 }
 
-func (s *Service) StopMachine(ctx context.Context, machineID string) (*types.Machine, error) {
+func (s *Service) UpdateMachineDesiredState(ctx context.Context, opts types.NodeUpdateMachineDesiredStateOptions) (*types.Machine, error) {
 	s.machineControllerLock.RLock()
 	defer s.machineControllerLock.RUnlock()
 
-	ctrl, ok := s.machineControllers[machineID]
+	ctrl, ok := s.machineControllers[opts.MachineID]
 	if !ok {
 		return nil, types.ErrMachineNotFound
 	}
 
-	s.log.Info("requesting machine stop", slog.String("machine-id", machineID))
-	ctrl.UpdateDesiredState(types.MachineDesiredStateTerminated)
+	s.log.Info("requesting new machine desired state",
+		slog.String("machine-id", opts.MachineID),
+		slog.Any("desired-state", opts.DesiredState))
+	ctrl.UpdateDesiredState(opts.DesiredState)
 	return ctrl.GetMachine(), nil
 }

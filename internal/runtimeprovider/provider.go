@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 )
 
 type Provider struct {
@@ -17,6 +18,7 @@ type Provider struct {
 	initBinary            string
 	storageDirectory      string
 	vmLinuxPath           string
+	gcMutex               sync.RWMutex
 }
 
 var _ types.RuntimeProvider = (*Provider)(nil)
