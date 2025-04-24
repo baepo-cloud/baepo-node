@@ -51,3 +51,12 @@ func ProtoToMachineDesiredState(state v1pb.MachineDesiredState) types.MachineDes
 		return ""
 	}
 }
+
+func ProtoToMachineSpec(spec *v1pb.MachineSpec) types.MachineSpec {
+	return types.MachineSpec{
+		Cpus:     spec.Cpus,
+		MemoryMB: spec.MemoryMb,
+		Env:      spec.Containers[0].Env,
+		Image:    spec.Containers[0].Image,
+	}
+}

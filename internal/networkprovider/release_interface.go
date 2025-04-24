@@ -18,7 +18,7 @@ func (p *Provider) ReleaseInterface(ctx context.Context, name string) error {
 	var networkInterface types.NetworkInterface
 	err := p.db.WithContext(ctx).First(&networkInterface, "name = ? AND deleted_at IS NULL", name).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return types.ErrNetworkInterfaceNotFound
+		return nil
 	} else if err != nil {
 		return fmt.Errorf("failed to retrieve network interface: %w", err)
 	}

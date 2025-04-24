@@ -3,9 +3,11 @@ package machinecontroller
 import (
 	"context"
 	"github.com/baepo-cloud/baepo-node/internal/types"
+	"github.com/baepo-cloud/baepo-node/internal/typeutil"
 	"gorm.io/gorm"
 	"log/slog"
 	"sync"
+	"time"
 )
 
 type (
@@ -84,14 +86,20 @@ func (c *Controller) watchStateChanges(ctx context.Context) {
 			if c.watcher != nil {
 				c.watcher(machine)
 			}
-			
+
 			if !machine.State.MatchDesiredState(machine.DesiredState) {
 				go c.startReconciliation()
 			}
 		case state := <-c.currentStateChan:
 			err := c.updateMachine(func(machine *types.Machine) error {
+				fieldsToUpdate := []string{"State"}
+				if state == types.MachineStateTerminated {
+					fieldsToUpdate = append(fieldsToUpdate, "TerminatedAt")
+					machine.TerminatedAt = typeutil.Ptr(time.Now())
+				}
+
 				machine.State = state
-				return c.db.WithContext(ctx).Select("State").Save(machine).Error
+				return c.db.WithContext(ctx).Select(fieldsToUpdate).Save(machine).Error
 			})
 			if err != nil {
 				c.log.Error("failed to update machine state",

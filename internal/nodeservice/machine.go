@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/nodeservice/machinecontroller"
 	"github.com/baepo-cloud/baepo-node/internal/types"
+	apiv1pb "github.com/baepo-cloud/baepo-proto/go/baepo/api/v1"
 	"log/slog"
 )
 
@@ -36,7 +37,9 @@ func (s *Service) newMachineController(machine *types.Machine) *machinecontrolle
 	return machinecontroller.New(
 		s.db, s.volumeProvider, s.networkProvider, s.runtimeProvider, machine,
 		func(machine *types.Machine) {
-
+			s.events <- &apiv1pb.NodeControllerClientEvent{
+				Event: s.newMachineEvent(machine),
+			}
 		},
 	)
 }
@@ -78,7 +81,7 @@ func (s *Service) CreateMachine(ctx context.Context, opts types.NodeCreateMachin
 			Env:      map[string]string{},
 		},
 	}
-	if err := s.db.WithContext(ctx).Create(&machine).Error; err != nil {
+	if err := s.db.WithContext(ctx).Save(&machine).Error; err != nil {
 		return nil, fmt.Errorf("failed to create machine: %w", err)
 	}
 
