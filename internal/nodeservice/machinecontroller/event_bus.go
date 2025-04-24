@@ -27,8 +27,6 @@ func (c *Controller) SubscribeToEvents(handler func(context.Context, *corev1pb.M
 }
 
 func (c *Controller) startEventDispatcher(ctx context.Context) {
-	c.eventHandlers = make(map[string]func(context.Context, *corev1pb.MachineEvent))
-	c.eventsChan = make(chan *corev1pb.MachineEvent)
 	defer close(c.eventsChan)
 
 	for {

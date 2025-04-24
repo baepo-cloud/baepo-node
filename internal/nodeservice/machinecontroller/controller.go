@@ -17,7 +17,6 @@ type (
 		networkProvider                 types.NetworkProvider
 		runtimeProvider                 types.RuntimeProvider
 		machine                         *types.Machine
-		cancelWatch                     context.CancelFunc
 		cancelMonitoring                context.CancelFunc
 		monitoringMutex                 sync.Mutex
 		monitoringConsecutiveErrorCount int
@@ -48,14 +47,20 @@ func New(
 		networkProvider: networkProvider,
 		runtimeProvider: runtimeProvider,
 		machine:         machine,
+		eventsChan:      make(chan *corev1pb.MachineEvent),
+		eventHandlers:   make(map[string]func(context.Context, *corev1pb.MachineEvent)),
 	}
 
 	eventDispatcherCtx, eventCancelDispatcher := context.WithCancel(context.Background())
 	ctrl.eventCancelDispatcher = eventCancelDispatcher
-	ctrl.startEventDispatcher(eventDispatcherCtx)
+	go ctrl.startEventDispatcher(eventDispatcherCtx)
 
 	ctrl.SubscribeToEvents(ctrl.handleEvent)
 	ctrl.syncMonitoring()
+
+	if !machine.State.MatchDesiredState(machine.DesiredState) {
+		go ctrl.startReconciliation()
+	}
 
 	return ctrl
 }
@@ -74,12 +79,14 @@ func (c *Controller) Stop() {
 	c.reconciliationMutex.Lock()
 	defer c.reconciliationMutex.Unlock()
 
-	c.cancelWatch()
 	if c.cancelMonitoring != nil {
 		c.cancelMonitoring()
 	}
 	if c.cancelReconciliation != nil {
 		c.cancelReconciliation()
+	}
+	if c.eventCancelDispatcher != nil {
+		c.eventCancelDispatcher()
 	}
 }
 

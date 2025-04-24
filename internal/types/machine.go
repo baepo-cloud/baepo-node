@@ -67,9 +67,9 @@ func (s MachineState) MatchDesiredState(desired MachineDesiredState) bool {
 	switch s {
 	case MachineStatePending:
 		return desired == MachineDesiredStatePending
-	case MachineStateStarting, MachineStateRunning, MachineStateDegraded:
+	case MachineStateRunning, MachineStateDegraded:
 		return desired == MachineDesiredStateRunning
-	case MachineStateTerminating, MachineStateTerminated:
+	case MachineStateTerminated:
 		return desired == MachineDesiredStateTerminated
 	default:
 		return false

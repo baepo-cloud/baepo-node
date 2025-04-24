@@ -5,6 +5,7 @@ import (
 	"github.com/baepo-cloud/baepo-node/internal/pbadapter"
 	"github.com/baepo-cloud/baepo-node/internal/types"
 	corev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/core/v1"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"log/slog"
 )
 
@@ -48,10 +49,7 @@ func (c *Controller) handleStateChange(ctx context.Context, event *corev1pb.Mach
 	}
 
 	machine := c.GetMachine()
-	if machine.State == types.MachineStateTerminated {
-		c.Stop()
-		return
-	} else if !machine.State.MatchDesiredState(machine.DesiredState) {
+	if !machine.State.MatchDesiredState(machine.DesiredState) {
 		go c.startReconciliation()
 	}
 }
@@ -77,6 +75,8 @@ func (c *Controller) dispatchMachineStateChangeEvent(state types.MachineState) {
 	machine := c.GetMachine()
 	if machine.State != state {
 		c.PublishEvent(&corev1pb.MachineEvent{
+			Timestamp: timestamppb.Now(),
+			MachineId: machine.ID,
 			Event: &corev1pb.MachineEvent_StateChangedEvent{
 				StateChangedEvent: &corev1pb.MachineEvent_StateChanged{
 					State: pbadapter.MachineStateToProto(state),
