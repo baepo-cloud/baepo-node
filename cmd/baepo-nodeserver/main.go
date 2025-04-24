@@ -20,6 +20,7 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -29,7 +30,7 @@ import (
 )
 
 func main() {
-	//slog.SetLogLoggerLevel(slog.LevelDebug)
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 	fx.New(
 		fxlog.Logger(),
 		fx.Provide(provideConfig),

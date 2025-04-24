@@ -52,6 +52,8 @@ func (c *Controller) handleStateChange(ctx context.Context, event *corev1pb.Mach
 	if !machine.State.MatchDesiredState(machine.DesiredState) {
 		go c.startReconciliation()
 	}
+
+	c.syncMonitoring()
 }
 
 func (c *Controller) handleHealthcheck(ctx context.Context, event *corev1pb.MachineEvent_HealthcheckEvent) {

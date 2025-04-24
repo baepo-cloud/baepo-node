@@ -54,9 +54,6 @@ func (c *Controller) startReconciliation() {
 }
 
 func (c *Controller) reconcileState(ctx context.Context, desiredState types.MachineDesiredState) error {
-	// sync monitoring after reconciliation is performed
-	defer c.syncMonitoring()
-
 	switch desiredState {
 	case types.MachineDesiredStatePending:
 		return c.reconcileToPendingState(ctx)
