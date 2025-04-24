@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/initd/connecthandler"
 	"github.com/baepo-cloud/baepo-node/internal/vsock"
-	"github.com/baepo-cloud/baepo-proto/go/baepo/node/v1/v1connect"
+	"github.com/baepo-cloud/baepo-proto/go/baepo/initd/v1/initdv1pbconnect"
 	"net/http"
 )
 
@@ -16,7 +16,7 @@ func (d *initd) StartServer() error {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle(v1connect.NewInitDHandler(connecthandler.NewInitDServiceServer(d)))
+	mux.Handle(initdv1pbconnect.NewInitDHandler(connecthandler.NewInitDServiceServer(d)))
 	server := &http.Server{Handler: mux}
 	return server.Serve(ln)
 }

@@ -5,14 +5,12 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/baepo-cloud/baepo-node/internal/apiserver/v1pbadapter"
+	"github.com/baepo-cloud/baepo-node/internal/pbadapter"
 	"github.com/baepo-cloud/baepo-node/internal/types"
 	"github.com/baepo-cloud/baepo-node/internal/typeutil"
 	apiv1pb "github.com/baepo-cloud/baepo-proto/go/baepo/api/v1"
-	nodev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/node/v1"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"io"
 	"log/slog"
 	"os"
@@ -73,8 +71,13 @@ func (s *Service) connectNodeToController() error {
 		select {
 		case <-s.ctx.Done():
 			return nil
-		case event := <-s.events:
-			if err = stream.Send(event); err != nil {
+		case event := <-s.machineEvents:
+			err = stream.Send(&apiv1pb.NodeControllerClientEvent{
+				Event: &apiv1pb.NodeControllerClientEvent_MachineEvent{
+					MachineEvent: event,
+				},
+			})
+			if err != nil {
 				return err
 			}
 		case event := <-serverEvents:
@@ -229,7 +232,7 @@ func (s *Service) processExpectedMachines(machines []*apiv1pb.NodeControllerServ
 }
 
 func (s *Service) reconcileWithExpectedMachine(spec *apiv1pb.NodeControllerServerEvent_MachineSpec) error {
-	desiredState := v1pbadapter.ProtoToMachineDesiredState(spec.DesiredState)
+	desiredState := pbadapter.ProtoToMachineDesiredState(spec.DesiredState)
 	log := s.log.With(slog.String("machine-id", spec.MachineId), slog.Any("desired-state", desiredState))
 
 	s.machineControllerLock.RLock()
@@ -241,7 +244,7 @@ func (s *Service) reconcileWithExpectedMachine(spec *apiv1pb.NodeControllerServe
 		_, err := s.CreateMachine(s.ctx, types.NodeCreateMachineOptions{
 			MachineID:    spec.MachineId,
 			DesiredState: desiredState,
-			Spec:         v1pbadapter.ProtoToMachineSpec(spec.Spec),
+			Spec:         pbadapter.ProtoToMachineSpec(spec.Spec),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create machine: %w", err)
@@ -271,35 +274,19 @@ func (s *Service) processServerEvent(unknownEvent *apiv1pb.NodeControllerServerE
 	case *apiv1pb.NodeControllerServerEvent_CreateMachineEvent:
 		_, err := s.CreateMachine(s.ctx, types.NodeCreateMachineOptions{
 			MachineID:    event.CreateMachineEvent.MachineId,
-			DesiredState: v1pbadapter.ProtoToMachineDesiredState(event.CreateMachineEvent.DesiredState),
-			Spec:         v1pbadapter.ProtoToMachineSpec(event.CreateMachineEvent.Spec),
+			DesiredState: pbadapter.ProtoToMachineDesiredState(event.CreateMachineEvent.DesiredState),
+			Spec:         pbadapter.ProtoToMachineSpec(event.CreateMachineEvent.Spec),
 		})
 		return err
 	case *apiv1pb.NodeControllerServerEvent_UpdateMachineDesiredStateEvent:
 		_, err := s.UpdateMachineDesiredState(s.ctx, types.NodeUpdateMachineDesiredStateOptions{
 			MachineID:    event.UpdateMachineDesiredStateEvent.MachineId,
-			DesiredState: v1pbadapter.ProtoToMachineDesiredState(event.UpdateMachineDesiredStateEvent.DesiredState),
+			DesiredState: pbadapter.ProtoToMachineDesiredState(event.UpdateMachineDesiredStateEvent.DesiredState),
 		})
 		return err
 	case *apiv1pb.NodeControllerServerEvent_PingEvent:
 		return nil
 	default:
 		return errors.New("unknown event")
-	}
-}
-
-func (s *Service) newMachineEvent(machine *types.Machine) *apiv1pb.NodeControllerClientEvent_MachineEvent {
-	return &apiv1pb.NodeControllerClientEvent_MachineEvent{
-		MachineEvent: &nodev1pb.MachineEvent{
-			MachineId:          machine.ID,
-			State:              v1pbadapter.MachineStateToProto(machine.State),
-			DesiredState:       v1pbadapter.MachineDesiredStateToProto(machine.DesiredState),
-			StartedAt:          nil,
-			ExpiresAt:          nil,
-			TerminatedAt:       nil,
-			TerminationCause:   nil,
-			TerminationDetails: nil,
-			Timestamp:          timestamppb.Now(),
-		},
 	}
 }

@@ -7,7 +7,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/types"
-	"github.com/baepo-cloud/baepo-proto/go/baepo/node/v1/v1connect"
+	"github.com/baepo-cloud/baepo-proto/go/baepo/node/v1/nodev1pbconnect"
 	"github.com/expected-so/canonicallog"
 	"log/slog"
 	"net/http"
@@ -20,7 +20,7 @@ type Server struct {
 	httpServer *http.Server
 }
 
-var _ v1connect.NodeServiceHandler = (*Server)(nil)
+var _ nodev1pbconnect.NodeServiceHandler = (*Server)(nil)
 
 func New(service types.NodeService, config *types.NodeServerConfig) *Server {
 	return &Server{
@@ -33,7 +33,7 @@ func (s *Server) Start(ctx context.Context) error {
 	slog.Info("starting api server", slog.String("addr", s.config.APIAddr))
 
 	mux := http.NewServeMux()
-	mux.Handle(v1connect.NewNodeServiceHandler(s))
+	mux.Handle(nodev1pbconnect.NewNodeServiceHandler(s))
 
 	s.httpServer = &http.Server{
 		Addr:    s.config.APIAddr,

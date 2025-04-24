@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/nodeservice/machinecontroller"
 	"github.com/baepo-cloud/baepo-node/internal/types"
-	apiv1pb "github.com/baepo-cloud/baepo-proto/go/baepo/api/v1"
-	"github.com/baepo-cloud/baepo-proto/go/baepo/api/v1/v1connect"
+	"github.com/baepo-cloud/baepo-proto/go/baepo/api/v1/apiv1pbconnect"
+	corev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/core/v1"
 	"gorm.io/gorm"
 	"log/slog"
 	"net"
@@ -19,7 +19,7 @@ import (
 type Service struct {
 	log                   *slog.Logger
 	db                    *gorm.DB
-	apiClient             v1connect.NodeControllerServiceClient
+	apiClient             apiv1pbconnect.NodeControllerServiceClient
 	volumeProvider        types.VolumeProvider
 	networkProvider       types.NetworkProvider
 	runtimeProvider       types.RuntimeProvider
@@ -30,14 +30,14 @@ type Service struct {
 	cancelCtx             context.CancelFunc
 	machineControllerLock sync.RWMutex
 	machineControllers    map[string]*machinecontroller.Controller
-	events                chan *apiv1pb.NodeControllerClientEvent
+	machineEvents         chan *corev1pb.MachineEvent
 }
 
 var _ types.NodeService = (*Service)(nil)
 
 func New(
 	db *gorm.DB,
-	apiClient v1connect.NodeControllerServiceClient,
+	apiClient apiv1pbconnect.NodeControllerServiceClient,
 	volumeProvider types.VolumeProvider,
 	networkProvider types.NetworkProvider,
 	runtimeProvider types.RuntimeProvider,
@@ -53,7 +53,7 @@ func New(
 		config:                config,
 		machineControllerLock: sync.RWMutex{},
 		machineControllers:    map[string]*machinecontroller.Controller{},
-		events:                make(chan *apiv1pb.NodeControllerClientEvent),
+		machineEvents:         make(chan *corev1pb.MachineEvent),
 	}
 }
 

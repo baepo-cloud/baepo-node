@@ -13,7 +13,7 @@ import (
 	"github.com/baepo-cloud/baepo-node/internal/runtimeprovider"
 	"github.com/baepo-cloud/baepo-node/internal/types"
 	"github.com/baepo-cloud/baepo-node/internal/volumeprovider"
-	"github.com/baepo-cloud/baepo-proto/go/baepo/api/v1/v1connect"
+	"github.com/baepo-cloud/baepo-proto/go/baepo/api/v1/apiv1pbconnect"
 	_ "github.com/joho/godotenv/autoload"
 	"go.uber.org/fx"
 	"golang.org/x/net/http2"
@@ -162,7 +162,7 @@ func provideRuntimeProvider(config *types.NodeServerConfig) types.RuntimeProvide
 	)
 }
 
-func provideApiClient() v1connect.NodeControllerServiceClient {
+func provideApiClient() apiv1pbconnect.NodeControllerServiceClient {
 	client := &http.Client{
 		Transport: &http2.Transport{
 			AllowHTTP: true,
@@ -174,5 +174,5 @@ func provideApiClient() v1connect.NodeControllerServiceClient {
 		},
 	}
 
-	return v1connect.NewNodeControllerServiceClient(client, "http://localhost:3000")
+	return apiv1pbconnect.NewNodeControllerServiceClient(client, "http://localhost:3000")
 }

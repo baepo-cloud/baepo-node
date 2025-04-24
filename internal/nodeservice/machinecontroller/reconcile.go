@@ -118,12 +118,12 @@ func (c *Controller) reconcileToRunningState(ctx context.Context) error {
 		return fmt.Errorf("failed to boot machine: %w", err)
 	}
 
-	c.currentStateChan <- types.MachineStateStarting
+	c.dispatchMachineStateChangeEvent(types.MachineStateStarting)
 	return nil
 }
 
 func (c *Controller) reconcileToTerminatedState(ctx context.Context) error {
-	c.currentStateChan <- types.MachineStateTerminating
+	c.dispatchMachineStateChangeEvent(types.MachineStateTerminating)
 
 	machine := c.GetMachine()
 	if machine.RuntimePID != nil && *machine.RuntimePID > 0 {
@@ -155,6 +155,6 @@ func (c *Controller) reconcileToTerminatedState(ctx context.Context) error {
 		}
 	}
 
-	c.currentStateChan <- types.MachineStateTerminated
+	c.dispatchMachineStateChangeEvent(types.MachineStateTerminated)
 	return nil
 }

@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/nodeservice/machinecontroller"
+	"github.com/baepo-cloud/baepo-node/internal/pbadapter"
 	"github.com/baepo-cloud/baepo-node/internal/types"
-	apiv1pb "github.com/baepo-cloud/baepo-proto/go/baepo/api/v1"
+	corev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/core/v1"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"log/slog"
 )
 
@@ -34,14 +36,13 @@ func (s *Service) loadMachines(ctx context.Context) error {
 }
 
 func (s *Service) newMachineController(machine *types.Machine) *machinecontroller.Controller {
-	return machinecontroller.New(
-		s.db, s.volumeProvider, s.networkProvider, s.runtimeProvider, machine,
-		func(machine *types.Machine) {
-			s.events <- &apiv1pb.NodeControllerClientEvent{
-				Event: s.newMachineEvent(machine),
-			}
-		},
-	)
+	ctrl := machinecontroller.New(s.db, s.volumeProvider, s.networkProvider, s.runtimeProvider, machine)
+	ctrl.SubscribeToEvents(func(ctx context.Context, event *corev1pb.MachineEvent) {
+		go func() {
+			s.machineEvents <- event
+		}()
+	})
+	return ctrl
 }
 
 func (s *Service) FindMachine(ctx context.Context, machineID string) (*types.Machine, error) {
@@ -104,6 +105,14 @@ func (s *Service) UpdateMachineDesiredState(ctx context.Context, opts types.Node
 	s.log.Info("requesting new machine desired state",
 		slog.String("machine-id", opts.MachineID),
 		slog.Any("desired-state", opts.DesiredState))
-	ctrl.UpdateDesiredState(opts.DesiredState)
+	ctrl.PublishEvent(&corev1pb.MachineEvent{
+		Timestamp: timestamppb.Now(),
+		MachineId: opts.MachineID,
+		Event: &corev1pb.MachineEvent_DesiredStateChangedEvent{
+			DesiredStateChangedEvent: &corev1pb.MachineEvent_DesiredStateChanged{
+				DesiredState: pbadapter.MachineDesiredStateToProto(opts.DesiredState),
+			},
+		},
+	})
 	return ctrl.GetMachine(), nil
 }

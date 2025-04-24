@@ -5,7 +5,7 @@ import (
 	"context"
 	"github.com/baepo-cloud/baepo-node/internal/initd"
 	"github.com/baepo-cloud/baepo-node/internal/vsock"
-	"github.com/baepo-cloud/baepo-proto/go/baepo/node/v1/v1connect"
+	"github.com/baepo-cloud/baepo-proto/go/baepo/initd/v1/initdv1pbconnect"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"net"
 	"net/http"
@@ -19,7 +19,7 @@ func (p *Provider) Healthcheck(ctx context.Context, machineID string) error {
 			},
 		},
 	}
-	initClient := v1connect.NewInitDClient(httpClient, "http://initd")
+	initClient := initdv1pbconnect.NewInitDClient(httpClient, "http://initd")
 	_, err := initClient.Healthcheck(ctx, connect.NewRequest(&emptypb.Empty{}))
 	return err
 }

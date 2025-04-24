@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/baepo-cloud/baepo-node/internal/types"
 	"github.com/baepo-cloud/baepo-node/internal/typeutil"
+	corev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/core/v1"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"log/slog"
 	"time"
 )
@@ -37,7 +39,6 @@ func (c *Controller) syncMonitoring() {
 }
 
 func (c *Controller) monitor(ctx context.Context, machineID string) {
-	consecutiveError := 0
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
@@ -51,19 +52,18 @@ func (c *Controller) monitor(ctx context.Context, machineID string) {
 			err := c.runtimeProvider.Healthcheck(checkCtx, machineID)
 			cancelCheckCtx()
 
+			healthcheckEvent := &corev1pb.MachineEvent_Healthcheck{}
 			if err != nil {
-				c.log.Warn("machine healthcheck failed", slog.Any("error", err))
-
-				consecutiveError++
-				if consecutiveError >= 3 {
-					c.updateCurrentState(types.MachineStateError)
-				} else if consecutiveError > 0 {
-					c.updateCurrentState(types.MachineStateDegraded)
-				}
-			} else {
-				consecutiveError = 0
-				c.updateCurrentState(types.MachineStateRunning)
+				healthcheckEvent.Error = typeutil.Ptr(err.Error())
 			}
+
+			c.PublishEvent(&corev1pb.MachineEvent{
+				Timestamp: timestamppb.Now(),
+				MachineId: machineID,
+				Event: &corev1pb.MachineEvent_HealthcheckEvent{
+					HealthcheckEvent: healthcheckEvent,
+				},
+			})
 		}
 	}
 }

@@ -3,31 +3,32 @@ package machinecontroller
 import (
 	"context"
 	"github.com/baepo-cloud/baepo-node/internal/types"
-	"github.com/baepo-cloud/baepo-node/internal/typeutil"
+	corev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/core/v1"
 	"gorm.io/gorm"
 	"log/slog"
 	"sync"
-	"time"
 )
 
 type (
 	Controller struct {
-		log                  *slog.Logger
-		db                   *gorm.DB
-		volumeProvider       types.VolumeProvider
-		networkProvider      types.NetworkProvider
-		runtimeProvider      types.RuntimeProvider
-		machine              *types.Machine
-		cancelWatch          context.CancelFunc
-		cancelMonitoring     context.CancelFunc
-		monitoringMutex      sync.Mutex
-		desiredStateChan     chan types.MachineDesiredState
-		currentStateChan     chan types.MachineState
-		machineMutex         sync.RWMutex
-		reconcileToState     types.MachineDesiredState
-		reconciliationMutex  sync.Mutex
-		cancelReconciliation func()
-		watcher              func(machine *types.Machine)
+		log                             *slog.Logger
+		db                              *gorm.DB
+		volumeProvider                  types.VolumeProvider
+		networkProvider                 types.NetworkProvider
+		runtimeProvider                 types.RuntimeProvider
+		machine                         *types.Machine
+		cancelWatch                     context.CancelFunc
+		cancelMonitoring                context.CancelFunc
+		monitoringMutex                 sync.Mutex
+		monitoringConsecutiveErrorCount int
+		machineMutex                    sync.RWMutex
+		reconcileToState                types.MachineDesiredState
+		reconciliationMutex             sync.Mutex
+		cancelReconciliation            func()
+		eventsChan                      chan *corev1pb.MachineEvent
+		eventCancelDispatcher           context.CancelFunc
+		eventHandlers                   map[string]func(context.Context, *corev1pb.MachineEvent)
+		eventHandlersLock               sync.RWMutex
 	}
 )
 
@@ -37,89 +38,26 @@ func New(
 	networkProvider types.NetworkProvider,
 	runtimeProvider types.RuntimeProvider,
 	machine *types.Machine,
-	watcher func(machine *types.Machine),
 ) *Controller {
 	ctrl := &Controller{
 		log: slog.With(
 			slog.String("component", "machinecontroller"),
 			slog.String("machine-id", machine.ID)),
-		db:               db,
-		volumeProvider:   volumeProvider,
-		networkProvider:  networkProvider,
-		runtimeProvider:  runtimeProvider,
-		machine:          machine,
-		desiredStateChan: make(chan types.MachineDesiredState),
-		currentStateChan: make(chan types.MachineState),
-		watcher:          watcher,
+		db:              db,
+		volumeProvider:  volumeProvider,
+		networkProvider: networkProvider,
+		runtimeProvider: runtimeProvider,
+		machine:         machine,
 	}
 
-	watchCtx, cancelWatch := context.WithCancel(context.Background())
-	ctrl.cancelWatch = cancelWatch
-	go ctrl.watchStateChanges(watchCtx)
+	eventDispatcherCtx, eventCancelDispatcher := context.WithCancel(context.Background())
+	ctrl.eventCancelDispatcher = eventCancelDispatcher
+	ctrl.startEventDispatcher(eventDispatcherCtx)
+
+	ctrl.SubscribeToEvents(ctrl.handleEvent)
+	ctrl.syncMonitoring()
 
 	return ctrl
-}
-
-func (c *Controller) watchStateChanges(ctx context.Context) {
-	if !c.machine.State.MatchDesiredState(c.machine.DesiredState) {
-		go c.startReconciliation()
-	}
-
-	c.syncMonitoring()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case desiredState := <-c.desiredStateChan:
-			err := c.updateMachine(func(machine *types.Machine) error {
-				machine.DesiredState = desiredState
-				return c.db.WithContext(ctx).Select("DesiredState").Save(machine).Error
-			})
-			if err != nil {
-				c.log.Error("failed to update machine desired state",
-					slog.String("desired-state", string(desiredState)),
-					slog.Any("error", err))
-			}
-
-			machine := c.GetMachine()
-			if c.watcher != nil {
-				c.watcher(machine)
-			}
-
-			if !machine.State.MatchDesiredState(machine.DesiredState) {
-				go c.startReconciliation()
-			}
-		case state := <-c.currentStateChan:
-			err := c.updateMachine(func(machine *types.Machine) error {
-				fieldsToUpdate := []string{"State"}
-				if state == types.MachineStateTerminated {
-					fieldsToUpdate = append(fieldsToUpdate, "TerminatedAt")
-					machine.TerminatedAt = typeutil.Ptr(time.Now())
-				}
-
-				machine.State = state
-				return c.db.WithContext(ctx).Select(fieldsToUpdate).Save(machine).Error
-			})
-			if err != nil {
-				c.log.Error("failed to update machine state",
-					slog.String("state", string(state)),
-					slog.Any("error", err))
-			}
-
-			machine := c.GetMachine()
-			if c.watcher != nil {
-				c.watcher(machine)
-			}
-
-			if machine.State == types.MachineStateTerminated {
-				c.Stop()
-				return
-			} else if !machine.State.MatchDesiredState(machine.DesiredState) {
-				go c.startReconciliation()
-			}
-		}
-	}
 }
 
 func (c *Controller) GetMachine() *types.Machine {
@@ -128,20 +66,6 @@ func (c *Controller) GetMachine() *types.Machine {
 
 	copiedMachine := *c.machine
 	return &copiedMachine
-}
-
-func (c *Controller) UpdateDesiredState(desiredState types.MachineDesiredState) {
-	machine := c.GetMachine()
-	if machine.DesiredState != desiredState {
-		c.desiredStateChan <- desiredState
-	}
-}
-
-func (c *Controller) updateCurrentState(state types.MachineState) {
-	machine := c.GetMachine()
-	if machine.State != state {
-		c.currentStateChan <- state
-	}
 }
 
 func (c *Controller) Stop() {
