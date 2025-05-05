@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/baepo-cloud/baepo-node/init/initserver"
-	"github.com/baepo-cloud/baepo-node/internal/types"
+	"github.com/baepo-cloud/baepo-node/core/types"
+	"github.com/baepo-cloud/baepo-node/init/internal/initserver"
 	"os"
 )
 
