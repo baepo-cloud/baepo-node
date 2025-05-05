@@ -1,52 +1,107 @@
-package volumeprovider
+package imageprovider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/types"
+	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/nrednav/cuid2"
 	"github.com/sourcegraph/conc/pool"
 	"golang.org/x/sys/unix"
+	"gorm.io/gorm"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
-func (p *Provider) CreateVolume(ctx context.Context, image v1.Image) (*types.Volume, error) {
+func (p *Provider) Fetch(ctx context.Context, opts types.ImageFetchOptions) (*types.Image, error) {
+	ref, err := name.ParseReference(opts.Image)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse image reference: %w", err)
+	}
+
+	p.logger.Info("fetching image", slog.String("image-ref", ref.String()))
+	remoteImage, err := remote.Image(ref)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch remote image: %w", err)
+	}
+
+	digest, err := remoteImage.Digest()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get image digest: %w", err)
+	}
+
+	var image *types.Image
+	err = p.db.WithContext(ctx).Joins("Volume").First(&image, "digest = ?", digest.String()).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("failed to find image in db: %w", err)
+	} else if err == nil {
+		return image, nil
+	}
+
+	configFile, err := remoteImage.ConfigFile()
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch image config file: %w", err)
+	}
+
+	image = &types.Image{
+		ID:     cuid2.Generate(),
+		Digest: digest.String(),
+		Name:   ref.String(),
+		Spec: &types.ImageSpec{
+			User:       configFile.Config.User,
+			WorkingDir: configFile.Config.WorkingDir,
+			Env:        map[string]string{},
+			Command:    append(configFile.Config.Entrypoint, configFile.Config.Cmd...),
+		},
+	}
+	for _, env := range configFile.Config.Env {
+		parts := strings.SplitN(env, "=", 2)
+		if len(parts) == 1 {
+			parts = append(parts, "")
+		}
+		image.Spec.Env[parts[0]] = parts[1]
+	}
+
+	volume, err := p.createVolumeFromImage(ctx, remoteImage)
+	if err != nil {
+		return nil, err
+	}
+
+	image.VolumeID = volume.ID
+	image.Volume = volume
+	if err = p.db.WithContext(ctx).Create(&image).Error; err != nil {
+		return nil, fmt.Errorf("failed to create image in db: %w", err)
+	}
+
+	return image, nil
+}
+
+func (p *Provider) createVolumeFromImage(ctx context.Context, image v1.Image) (*types.Volume, error) {
 	tmpDir, err := os.MkdirTemp("", "image-*")
 	if err != nil {
 		return nil, fmt.Errorf("faield to create tmp dir: %w", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
-	imgSize, err := image.Size()
+	size, err := image.Size()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get image size: %w", err)
 	}
 
+	volume, err := p.volumeProvider.Create(ctx, types.VolumeCreateOptions{
+		Size: uint64((size / 1024 / 1024) + 1024), // img size in mb + 1GiB,
+	})
+
 	outputDir := filepath.Join(tmpDir, "output")
 	if err = os.Mkdir(outputDir, 0644); err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %v", err)
-	}
-
-	volume := &types.Volume{
-		ID:       cuid2.Generate(),
-		ReadOnly: false,
-		Size:     uint64((imgSize / 1024 / 1024) + 1024), // img size in mb + 1GiB,
-	}
-	volume.Path = fmt.Sprintf("/dev/%v/%v", p.volumeGroup, volume.ID)
-	if err = p.db.WithContext(ctx).Create(&volume).Error; err != nil {
-		return nil, fmt.Errorf("failed to create volume in database: %w", err)
-	}
-
-	err = p.runCmd(ctx, "/usr/bin/lvcreate",
-		"-y", "--virtualsize", fmt.Sprintf("%vM", volume.Size), "--thin",
-		"-n", volume.ID, fmt.Sprintf("%v/thinpool", p.volumeGroup),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create logical volume: %w", err)
 	}
 
 	err = p.runCmd(ctx, "mkfs.ext4", volume.Path)

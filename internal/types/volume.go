@@ -2,24 +2,28 @@ package types
 
 import (
 	"context"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"time"
 )
 
 type (
 	Volume struct {
 		ID        string `gorm:"primaryKey"`
-		MachineID *string
 		Path      string
-		ReadOnly  bool
 		Size      uint64
+		SourceID  *string
+		Source    *Volume
 		CreatedAt time.Time
 		DeletedAt *time.Time
 	}
 
-	VolumeProvider interface {
-		CreateVolume(ctx context.Context, image v1.Image) (*Volume, error)
+	VolumeCreateOptions struct {
+		Size   uint64
+		Source *Volume
+	}
 
-		DeleteVolume(ctx context.Context, volume *Volume) error
+	VolumeProvider interface {
+		Create(ctx context.Context, opts VolumeCreateOptions) (*Volume, error)
+
+		Delete(ctx context.Context, volume *Volume) error
 	}
 )

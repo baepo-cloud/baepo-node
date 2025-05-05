@@ -3,8 +3,8 @@ package runtimeprovider
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
+	"strings"
 )
 
 func (p *Provider) Terminate(ctx context.Context, machineID string) error {
@@ -16,12 +16,21 @@ func (p *Provider) Terminate(ctx context.Context, machineID string) error {
 		return fmt.Errorf("failed to create cloud hypervisor http client: %w", err)
 	}
 
-	if _, err = vmmClient.DeleteVM(ctx); err != nil {
-		slog.Warn("failed to delete vm", slog.Any("error", err))
+	_, err = vmmClient.DeleteVM(ctx)
+	if err != nil {
+		if !strings.Contains(err.Error(), "connect: no such file or directory") {
+			return fmt.Errorf("failed to delete vm: %w", err)
+		}
 	}
 
 	_, err = vmmClient.ShutdownVMMWithResponse(ctx)
+	if err != nil {
+		if !strings.Contains(err.Error(), "connect: no such file or directory") {
+			return fmt.Errorf("failed to shutdown vmm: %w", err)
+		}
+	}
+
 	_ = os.Remove(p.getInitRamFSPath(machineID))
 	_ = os.Remove(p.getInitDaemonSocketPath(machineID))
-	return err
+	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/baepo-cloud/baepo-node/internal/apiserver"
 	"github.com/baepo-cloud/baepo-node/internal/fxlog"
 	"github.com/baepo-cloud/baepo-node/internal/gatewayserver"
+	"github.com/baepo-cloud/baepo-node/internal/imageprovider"
 	"github.com/baepo-cloud/baepo-node/internal/networkprovider"
 	"github.com/baepo-cloud/baepo-node/internal/nodeservice"
 	"github.com/baepo-cloud/baepo-node/internal/runtimeprovider"
@@ -36,8 +37,9 @@ func main() {
 		fx.Provide(provideConfig),
 		fx.Provide(provideGORM),
 		fx.Provide(fx.Annotate(networkprovider.New, fx.As(new(types.NetworkProvider)))),
+		fx.Provide(fx.Annotate(imageprovider.New, fx.As(new(types.ImageProvider)))),
+		fx.Provide(fx.Annotate(runtimeprovider.New, fx.As(new(types.RuntimeProvider)))),
 		fx.Provide(provideVolumeProvider),
-		fx.Provide(provideRuntimeProvider),
 		fx.Provide(provideApiClient),
 		fx.Provide(fx.Annotate(nodeservice.New, fx.As(new(types.NodeService)))),
 		fx.Provide(apiserver.New),
@@ -84,6 +86,7 @@ func provideConfig() (*types.NodeServerConfig, error) {
 		GatewayAddr:           os.Getenv("NODE_GATEWAY_ADDR"),
 		StorageDirectory:      os.Getenv("NODE_STORAGE_DIRECTORY"),
 		InitBinary:            os.Getenv("NODE_INIT_BINARY"),
+		InitContainerBinary:   os.Getenv("NODE_INIT_CONTAINER_BINARY"),
 		VMLinux:               os.Getenv("NODE_VM_LINUX"),
 		CloudHypervisorBinary: os.Getenv("NODE_CLOUD_HYPERVISOR_BINARY"),
 	}
@@ -97,7 +100,10 @@ func provideConfig() (*types.NodeServerConfig, error) {
 		config.StorageDirectory = "./storage"
 	}
 	if config.InitBinary == "" {
-		config.InitBinary = "./resources/baepo-initd"
+		config.InitBinary = "./resources/baepo-init"
+	}
+	if config.InitContainerBinary == "" {
+		config.InitContainerBinary = "./resources/baepo-initcontainer"
 	}
 	if config.VMLinux == "" {
 		config.VMLinux = "./resources/vmlinux"
@@ -138,7 +144,7 @@ func provideGORM(config *types.NodeServerConfig) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	err = db.AutoMigrate(&types.Machine{}, &types.Volume{}, &types.NetworkInterface{})
+	err = db.AutoMigrate(&types.Machine{}, &types.Volume{}, &types.NetworkInterface{}, &types.MachineVolume{}, &types.Image{})
 	if err != nil {
 		return nil, err
 	}
@@ -152,15 +158,6 @@ func provideVolumeProvider(db *gorm.DB) types.VolumeProvider {
 	}
 
 	return volumeprovider.New(db, vg)
-}
-
-func provideRuntimeProvider(config *types.NodeServerConfig) types.RuntimeProvider {
-	return runtimeprovider.New(
-		config.CloudHypervisorBinary,
-		config.InitBinary,
-		config.StorageDirectory,
-		config.VMLinux,
-	)
 }
 
 func provideApiClient() apiv1pbconnect.NodeControllerServiceClient {

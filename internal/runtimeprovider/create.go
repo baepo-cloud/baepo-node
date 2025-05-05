@@ -24,6 +24,17 @@ func (p *Provider) Create(ctx context.Context, opts types.RuntimeCreateOptions) 
 		return -1, fmt.Errorf("failed to create cloud hypervisor http client: %w", err)
 	}
 
+	disksConfig := make([]chclient.DiskConfig, len(opts.Volumes))
+	for _, volume := range opts.Volumes {
+		disksConfig[volume.Position] = chclient.DiskConfig{
+			Path:      volume.Volume.Path,
+			Readonly:  typeutil.Ptr(false),
+			Direct:    typeutil.Ptr(true),
+			NumQueues: typeutil.Ptr(1),
+			QueueSize: typeutil.Ptr(128),
+		}
+	}
+
 	_, err = vmmClient.CreateVM(ctx, chclient.VmConfig{
 		Cpus: &chclient.CpusConfig{
 			BootVcpus: int(opts.Spec.Cpus),
@@ -32,15 +43,7 @@ func (p *Provider) Create(ctx context.Context, opts types.RuntimeCreateOptions) 
 		Memory: &chclient.MemoryConfig{
 			Size: int64(opts.Spec.MemoryMB * 1024 * 1024), // convert Mib to bytes
 		},
-		Disks: &[]chclient.DiskConfig{
-			{
-				Path:      opts.Volume.Path,
-				Readonly:  typeutil.Ptr(opts.Volume.ReadOnly),
-				Direct:    typeutil.Ptr(true),
-				NumQueues: typeutil.Ptr(1),
-				QueueSize: typeutil.Ptr(128),
-			},
-		},
+		Disks: &disksConfig,
 		Net: &[]chclient.NetConfig{
 			{
 				Tap:       &opts.NetworkInterface.Name,
@@ -58,7 +61,7 @@ func (p *Provider) Create(ctx context.Context, opts types.RuntimeCreateOptions) 
 			File: typeutil.Ptr(p.getHypervisorLogPath(opts.MachineID)),
 		},
 		Payload: chclient.PayloadConfig{
-			Kernel:    typeutil.Ptr(p.vmLinuxPath),
+			Kernel:    typeutil.Ptr(p.config.VMLinux),
 			Initramfs: typeutil.Ptr(p.getInitRamFSPath(opts.MachineID)),
 			Cmdline:   typeutil.Ptr("console=ttyS0 console=hvc0 root=/dev/vda rw rdinit=/init"),
 		},

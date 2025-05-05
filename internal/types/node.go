@@ -15,6 +15,7 @@ type (
 		GatewayAddr           string
 		StorageDirectory      string
 		InitBinary            string
+		InitContainerBinary   string
 		VMLinux               string
 		CloudHypervisorBinary string
 	}

@@ -73,11 +73,21 @@ func ProtoToMachineDesiredState(state corev1pb.MachineDesiredState) types.Machin
 	}
 }
 
-func ProtoToMachineSpec(spec *corev1pb.MachineSpec) types.MachineSpec {
-	return types.MachineSpec{
-		Cpus:     spec.Cpus,
-		MemoryMB: spec.MemoryMb,
-		Env:      spec.Containers[0].Env,
-		Image:    spec.Containers[0].Image,
+func ProtoToMachineSpec(specPb *corev1pb.MachineSpec) types.MachineSpec {
+	spec := types.MachineSpec{
+		Cpus:       specPb.Cpus,
+		MemoryMB:   specPb.MemoryMb,
+		Containers: make([]types.MachineContainerSpec, len(specPb.Containers)),
 	}
+	for index, container := range specPb.Containers {
+		spec.Containers[index] = types.MachineContainerSpec{
+			Name:    container.Name,
+			Image:   container.Image,
+			Env:     container.Env,
+			Command: container.Command,
+			//Healthcheck: container., todo
+			//WorkingDir:  "",
+		}
+	}
+	return spec
 }

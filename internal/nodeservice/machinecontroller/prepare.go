@@ -4,18 +4,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/internal/types"
-	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"log/slog"
-	"strings"
+	"github.com/nrednav/cuid2"
+	"time"
 )
 
 func (c *Controller) prepareMachine(ctx context.Context) error {
 	machine := c.GetMachine()
-	if machine.Volume == nil {
-		if err := c.prepareMachineVolume(ctx); err != nil {
-			return fmt.Errorf("failed to prepare machine volume: %w", err)
-		}
+	if err := c.prepareMachineVolumes(ctx); err != nil {
+		return fmt.Errorf("failed to prepare machine volume: %w", err)
 	}
 
 	if machine.NetworkInterface == nil {
@@ -27,51 +23,44 @@ func (c *Controller) prepareMachine(ctx context.Context) error {
 	return nil
 }
 
-func (c *Controller) prepareMachineVolume(ctx context.Context) error {
+func (c *Controller) prepareMachineVolumes(ctx context.Context) error {
 	machine := c.GetMachine()
-
-	c.log.Info("fetching image", slog.String("image-ref", machine.Spec.Image))
-	imageRef, err := name.ParseReference(machine.Spec.Image)
-	if err != nil {
-		return fmt.Errorf("failed to parse image reference: %w", err)
-	}
-
-	image, err := remote.Image(imageRef)
-	if err != nil {
-		return fmt.Errorf("failed to fetch remote image: %w", err)
-	}
-
-	imageConfigFile, err := image.ConfigFile()
-	if err != nil {
-		return fmt.Errorf("failed to fetch image config file: %w", err)
-	}
-
-	c.log.Info("creating machine volume")
-	volume, err := c.volumeProvider.CreateVolume(ctx, image)
-	if err != nil {
-		return fmt.Errorf("failed to create machine volume: %w", err)
-	}
-
-	err = c.updateMachine(func(machine *types.Machine) error {
-		machine.Spec.User = imageConfigFile.Config.User
-		machine.Spec.WorkingDir = imageConfigFile.Config.WorkingDir
-		for _, env := range imageConfigFile.Config.Env {
-			parts := strings.SplitN(env, "=", 2)
-			if len(parts) == 1 {
-				parts = append(parts, "")
-			}
-			machine.Spec.Env[parts[0]] = parts[1]
+	for index, ctr := range machine.Spec.Containers {
+		image, err := c.imageProvider.Fetch(ctx, types.ImageFetchOptions{
+			Image: ctr.Image,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to fetch image: %w", err)
 		}
-		for key, value := range machine.Spec.Env {
-			machine.Spec.Env[key] = value
+
+		volume, err := c.volumeProvider.Create(ctx, types.VolumeCreateOptions{
+			Size:   1024, // 1 gib
+			Source: image.Volume,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create machine container volume: %w", err)
 		}
-		machine.Spec.Command = append(imageConfigFile.Config.Entrypoint, imageConfigFile.Config.Cmd...)
-		machine.Volume = volume
-		machine.Volume.MachineID = &machine.ID
-		return c.db.WithContext(ctx).Select("MachineID").Save(machine.Volume).Error
-	})
-	if err != nil {
-		return fmt.Errorf("failed to claim volume for a machine: %w", err)
+
+		machineVolume := &types.MachineVolume{
+			ID:        cuid2.Generate(),
+			Position:  index,
+			Container: ctr.Name,
+			MachineID: machine.ID,
+			Machine:   machine,
+			ImageID:   &image.ID,
+			Image:     image,
+			VolumeID:  volume.ID,
+			Volume:    volume,
+			CreatedAt: time.Now(),
+		}
+		if err = c.db.WithContext(ctx).Save(&machineVolume).Error; err != nil {
+			return fmt.Errorf("failed to save machine volume: %w", err)
+		}
+
+		_ = c.updateMachine(func(machine *types.Machine) error {
+			machine.Volumes = append(machine.Volumes, machineVolume)
+			return nil
+		})
 	}
 
 	return nil

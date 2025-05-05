@@ -6,7 +6,7 @@ type (
 	RuntimeCreateOptions struct {
 		MachineID        string
 		Spec             MachineSpec
-		Volume           Volume
+		Volumes          []*MachineVolume
 		NetworkInterface NetworkInterface
 	}
 

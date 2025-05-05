@@ -13,7 +13,7 @@ func (p *Provider) GC(ctx context.Context, getExpectedMachineIDs func() []string
 	p.gcMutex.Lock()
 	defer p.gcMutex.Unlock()
 
-	runtimesDir := path.Join(p.storageDirectory, "runtimes")
+	runtimesDir := path.Join(p.config.StorageDirectory, "runtimes")
 	entries, err := os.ReadDir(runtimesDir)
 	if err != nil {
 		return fmt.Errorf("failed to read runtimes directory: %w", err)

@@ -23,6 +23,7 @@ type Service struct {
 	volumeProvider        types.VolumeProvider
 	networkProvider       types.NetworkProvider
 	runtimeProvider       types.RuntimeProvider
+	imageProvider         types.ImageProvider
 	config                *types.NodeServerConfig
 	authorityCert         *x509.Certificate
 	tlsCert               *tls.Certificate
@@ -41,6 +42,7 @@ func New(
 	volumeProvider types.VolumeProvider,
 	networkProvider types.NetworkProvider,
 	runtimeProvider types.RuntimeProvider,
+	imageProvider types.ImageProvider,
 	config *types.NodeServerConfig,
 ) *Service {
 	return &Service{
@@ -50,6 +52,7 @@ func New(
 		volumeProvider:        volumeProvider,
 		networkProvider:       networkProvider,
 		runtimeProvider:       runtimeProvider,
+		imageProvider:         imageProvider,
 		config:                config,
 		machineControllerLock: sync.RWMutex{},
 		machineControllers:    map[string]*machinecontroller.Controller{},

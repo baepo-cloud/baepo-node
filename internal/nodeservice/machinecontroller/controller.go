@@ -16,6 +16,7 @@ type (
 		volumeProvider                  types.VolumeProvider
 		networkProvider                 types.NetworkProvider
 		runtimeProvider                 types.RuntimeProvider
+		imageProvider                   types.ImageProvider
 		machine                         *types.Machine
 		cancelMonitoring                context.CancelFunc
 		monitoringMutex                 sync.Mutex
@@ -36,6 +37,7 @@ func New(
 	volumeProvider types.VolumeProvider,
 	networkProvider types.NetworkProvider,
 	runtimeProvider types.RuntimeProvider,
+	imageProvider types.ImageProvider,
 	machine *types.Machine,
 ) *Controller {
 	ctrl := &Controller{
@@ -46,6 +48,7 @@ func New(
 		volumeProvider:  volumeProvider,
 		networkProvider: networkProvider,
 		runtimeProvider: runtimeProvider,
+		imageProvider:   imageProvider,
 		machine:         machine,
 		eventsChan:      make(chan *corev1pb.MachineEvent),
 		eventHandlers:   make(map[string]func(context.Context, *corev1pb.MachineEvent)),

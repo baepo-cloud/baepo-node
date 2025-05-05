@@ -15,7 +15,7 @@ func (p *Provider) StartHypervisor(ctx context.Context, machineID string) (int, 
 	defer p.gcMutex.RUnlock()
 
 	socketPath := p.getHypervisorSocketPath(machineID)
-	cmd := exec.Command(p.cloudHypervisorBinary, "--api-socket", socketPath)
+	cmd := exec.Command(p.config.CloudHypervisorBinary, "--api-socket", socketPath)
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
 	}

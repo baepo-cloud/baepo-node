@@ -2,7 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/baepo-cloud/baepo-node/internal/initd"
+	"github.com/baepo-cloud/baepo-node/init/initserver"
+	"github.com/baepo-cloud/baepo-node/internal/types"
 	"os"
 )
 
@@ -13,12 +14,12 @@ func main() {
 	}
 	defer configFile.Close()
 
-	var config initd.Config
+	var config types.InitConfig
 	if err = json.NewDecoder(configFile).Decode(&config); err != nil {
 		panic(err)
 	}
 
-	err = initd.Run(config)
+	err = initserver.New(config).Run()
 	if err != nil {
 		panic(err)
 	}

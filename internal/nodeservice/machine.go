@@ -16,7 +16,8 @@ func (s *Service) loadMachines(ctx context.Context) error {
 
 	var machines []*types.Machine
 	err := s.db.WithContext(ctx).
-		Joins("Volume").
+		Preload("Volumes.Volume").
+		Preload("Volumes.Image.Volume").
 		Joins("NetworkInterface").
 		Where("machines.state NOT IN ?", []types.MachineState{types.MachineStateTerminated}).
 		Find(&machines).
@@ -36,7 +37,10 @@ func (s *Service) loadMachines(ctx context.Context) error {
 }
 
 func (s *Service) newMachineController(machine *types.Machine) *machinecontroller.Controller {
-	ctrl := machinecontroller.New(s.db, s.volumeProvider, s.networkProvider, s.runtimeProvider, machine)
+	ctrl := machinecontroller.New(
+		s.db, s.volumeProvider, s.networkProvider, s.runtimeProvider, s.imageProvider,
+		machine,
+	)
 	ctrl.SubscribeToEvents(func(ctx context.Context, event *corev1pb.MachineEvent) {
 		go func() {
 			s.machineEvents <- event
@@ -75,12 +79,7 @@ func (s *Service) CreateMachine(ctx context.Context, opts types.NodeCreateMachin
 		ID:           opts.MachineID,
 		State:        types.MachineStatePending,
 		DesiredState: opts.DesiredState,
-		Spec: &types.MachineSpec{
-			Image:    opts.Spec.Image,
-			Cpus:     opts.Spec.Cpus,
-			MemoryMB: opts.Spec.MemoryMB,
-			Env:      map[string]string{},
-		},
+		Spec:         &opts.Spec,
 	}
 	if err := s.db.WithContext(ctx).Save(&machine).Error; err != nil {
 		return nil, fmt.Errorf("failed to create machine: %w", err)

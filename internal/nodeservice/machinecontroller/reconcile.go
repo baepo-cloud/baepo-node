@@ -95,7 +95,7 @@ func (c *Controller) reconcileToRunningState(ctx context.Context) error {
 	pid, err := c.runtimeProvider.Create(ctx, types.RuntimeCreateOptions{
 		MachineID:        machine.ID,
 		Spec:             *machine.Spec,
-		Volume:           *machine.Volume,
+		Volumes:          machine.Volumes,
 		NetworkInterface: *machine.NetworkInterface,
 	})
 	if err != nil {
@@ -145,9 +145,8 @@ func (c *Controller) reconcileToTerminatedState(ctx context.Context) error {
 		}
 	}
 
-	if machine.Volume != nil {
-		err := c.volumeProvider.DeleteVolume(ctx, machine.Volume)
-		if err != nil {
+	for _, machineVolume := range machine.Volumes {
+		if err := c.volumeProvider.Delete(ctx, machineVolume.Volume); err != nil {
 			return err
 		}
 	}
