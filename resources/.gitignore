@@ -1,5 +1,2 @@
-/vmlinux
-/cloud-hypervisor
-/initramfs.cpio.gz
-/volume-group
-/baepo-initd
+*
+!.gitignore

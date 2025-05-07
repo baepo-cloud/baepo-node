@@ -1,0 +1,9 @@
+go 1.24.2
+
+use (
+    ./core
+    ./init
+    ./initcontainer
+    ./nodeagent
+	./nodeagentctl
+)
