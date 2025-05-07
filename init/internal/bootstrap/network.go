@@ -1,12 +1,13 @@
-package initserver
+package bootstrap
 
 import (
 	"fmt"
+	coretypes "github.com/baepo-cloud/baepo-node/core/types"
 	"github.com/vishvananda/netlink"
 	"net"
 )
 
-func (s *Server) setupNetwork() error {
+func SetupNetwork(config coretypes.InitConfig) error {
 	lo, err := netlink.LinkByName("lo")
 	if err != nil {
 		return fmt.Errorf("error getting loopback interface: %v", err)
@@ -21,7 +22,7 @@ func (s *Server) setupNetwork() error {
 		return fmt.Errorf("error getting eth0 interface: %v", err)
 	}
 
-	macAddr, err := net.ParseMAC(s.config.MacAddress)
+	macAddr, err := net.ParseMAC(config.MacAddress)
 	if err != nil {
 		return fmt.Errorf("failed to parse mac address: %w", err)
 	}
@@ -30,7 +31,7 @@ func (s *Server) setupNetwork() error {
 		return fmt.Errorf("failed to set mac address: %w", err)
 	}
 
-	ipAddr, err := netlink.ParseAddr(s.config.IPAddress)
+	ipAddr, err := netlink.ParseAddr(config.IPAddress)
 	if err != nil {
 		return fmt.Errorf("failed to parse ip address: %w", err)
 	}
@@ -44,7 +45,7 @@ func (s *Server) setupNetwork() error {
 	}
 
 	route := &netlink.Route{
-		Gw: net.ParseIP(s.config.GatewayAddress),
+		Gw: net.ParseIP(config.GatewayAddress),
 	}
 	if err = netlink.RouteAdd(route); err != nil {
 		return fmt.Errorf("error adding default route: %v", err)

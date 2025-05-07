@@ -1,4 +1,4 @@
-package connecthandler
+package initserver
 
 import (
 	"connectrpc.com/connect"
@@ -8,8 +8,8 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func (h InitServiceHandler) GetLogs(ctx context.Context, req *connect.Request[nodev1pb.InitGetLogsRequest], stream *connect.ServerStream[nodev1pb.InitGetLogsResponse]) error {
-	logChan, err := h.logService.Read(ctx, types.LogReadOptions{
+func (s InitServiceServer) GetLogs(ctx context.Context, req *connect.Request[nodev1pb.InitGetLogsRequest], stream *connect.ServerStream[nodev1pb.InitGetLogsResponse]) error {
+	logChan, err := s.logService.Read(ctx, types.LogReadOptions{
 		Follow: req.Msg.Follow,
 	})
 	if err != nil {

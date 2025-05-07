@@ -1,10 +1,10 @@
 package types
 
 type (
-	InitContainerState struct {
+	ContainerState struct {
 	}
 
-	InitService interface {
-		ContainersState() []*InitContainerState
+	ContainerService interface {
+		ContainersState() []*ContainerState
 	}
 )
