@@ -12,7 +12,7 @@ import (
 type logWriter struct {
 	service       *Service
 	containerName string
-	fd            uint32
+	error         bool
 	buf           bytes.Buffer
 	mu            sync.Mutex
 }
@@ -23,12 +23,12 @@ func (s *Service) NewContainerLogWriter(config coretypes.InitContainerConfig) (i
 	stdout := &logWriter{
 		service:       s,
 		containerName: config.Name,
-		fd:            1,
+		error:         false,
 	}
 	stderr := &logWriter{
 		service:       s,
 		containerName: config.Name,
-		fd:            2,
+		error:         true,
 	}
 	return stdout, stderr
 }
@@ -51,7 +51,7 @@ func (w *logWriter) Write(p []byte) (int, error) {
 		entry := &types.LogEntry{
 			Timestamp:     time.Now(),
 			ContainerName: w.containerName,
-			Fd:            w.fd,
+			Error:         w.error,
 			Content:       line,
 		}
 		if err = w.service.Write(entry); err != nil {

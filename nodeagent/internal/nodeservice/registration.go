@@ -146,33 +146,6 @@ func (s *Service) sendRegisterEvent(stream NodeControllerStream) (string, error)
 	}
 	s.tlsCert = &tlsCert
 
-	err = os.WriteFile(
-		path.Join(s.config.StorageDirectory, "ca.crt"),
-		registrationCompleted.RegistrationCompletedEvent.AuthorityCert,
-		0644,
-	)
-	if err != nil {
-		return "", fmt.Errorf("failed to write ca.crt: %w", err)
-	}
-
-	err = os.WriteFile(
-		path.Join(s.config.StorageDirectory, "tls.crt"),
-		registrationCompleted.RegistrationCompletedEvent.ServerCert,
-		0644,
-	)
-	if err != nil {
-		return "", fmt.Errorf("failed to write tls.crt: %w", err)
-	}
-
-	err = os.WriteFile(
-		path.Join(s.config.StorageDirectory, "tls.key"),
-		registrationCompleted.RegistrationCompletedEvent.ServerKey,
-		0644,
-	)
-	if err != nil {
-		return "", fmt.Errorf("failed to write tls.key: %w", err)
-	}
-
 	err = os.WriteFile(nodeTokenFilePath, []byte(registrationCompleted.RegistrationCompletedEvent.NodeToken), 0644)
 	if err != nil {
 		return "", fmt.Errorf("failed to store node token: %w", err)

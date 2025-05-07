@@ -11,7 +11,7 @@ type (
 	LogEntry struct {
 		Timestamp     time.Time
 		ContainerName string
-		Fd            uint32
+		Error         bool
 		Content       string
 	}
 

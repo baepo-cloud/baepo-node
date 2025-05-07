@@ -80,14 +80,18 @@ func ProtoToMachineSpec(specPb *corev1pb.MachineSpec) types.MachineSpec {
 		Containers: make([]types.MachineContainerSpec, len(specPb.Containers)),
 	}
 	for index, container := range specPb.Containers {
-		spec.Containers[index] = types.MachineContainerSpec{
+		containerSpec := types.MachineContainerSpec{
 			Name:    container.Name,
 			Image:   container.Image,
 			Env:     container.Env,
 			Command: container.Command,
 			//Healthcheck: container., todo
-			//WorkingDir:  "",
 		}
+		if container.WorkingDir != nil {
+			containerSpec.WorkingDir = *container.WorkingDir
+		}
+
+		spec.Containers[index] = containerSpec
 	}
 	return spec
 }

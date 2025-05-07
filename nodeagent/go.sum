@@ -4,6 +4,8 @@ github.com/baepo-cloud/baepo-proto/go v0.0.0-20250505095919-e0e3d091c78f h1:dBR/
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250505095919-e0e3d091c78f/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250507073228-f3fba591062a h1:7cokymb/75o1ohnBffLWgE13VSezm2HNKadVPCAbCsw=
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250507073228-f3fba591062a/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
+github.com/baepo-cloud/baepo-proto/go v0.0.0-20250507152536-59677dca669f h1:Fok9h01YEJKUVsvhMgY5jj5yvQRVIg5LLIpOZHNzzE8=
+github.com/baepo-cloud/baepo-proto/go v0.0.0-20250507152536-59677dca669f/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=

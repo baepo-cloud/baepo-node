@@ -1,3 +1,5 @@
+DIRS := init nodeagent nodeagentctl
+
 all: build-initcontainer build-init
 
 .PHONY: all
@@ -13,3 +15,15 @@ build-nodeagent:
 
 run-node: build-init build-initcontainer build-nodeagent
 	./resources/baepo-nodeagent
+
+upgrade-proto-version:
+	@echo "Please provide a commit hash for the upgrade"
+	@echo "Usage: make upgrade-proto-version COMMIT=<commit-hash>"
+ifdef COMMIT
+	@echo "Upgrading to commit $(COMMIT) in all modules..."
+	@for dir in $(DIRS); do \
+		echo "Upgrading in $$dir..."; \
+		cd $$dir && go get -u github.com/baepo-cloud/baepo-proto/go@$(COMMIT) && cd ..; \
+	done
+	@echo "All modules updated successfully!"
+endif

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/init/internal/types"
 	"github.com/nrednav/cuid2"
-	"golang.org/x/sys/unix"
 	"os"
 	"path/filepath"
 	"sync"
@@ -46,7 +45,11 @@ func (s *Service) Write(entry *types.LogEntry) error {
 		return err
 	}
 
-	_, _ = unix.Write(int(entry.Fd), []byte(entry.Content))
+	consoleWriter := os.Stdout
+	if entry.Error {
+		consoleWriter = os.Stderr
+	}
+	_, _ = fmt.Fprint(consoleWriter, entry.Content)
 
 	s.handlersMutex.RLock()
 	defer s.handlersMutex.RUnlock()

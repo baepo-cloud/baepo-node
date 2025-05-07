@@ -43,6 +43,7 @@ func (s *Server) GetMachineLogs(ctx context.Context, req *connect.Request[nodev1
 	client := s.runtimeProvider.NewInitClient(machine.ID)
 	readStream, err := client.GetLogs(ctx, connect.NewRequest(&nodev1pb.InitGetLogsRequest{
 		ContainerName: req.Msg.ContainerName,
+		Follow:        req.Msg.Follow,
 	}))
 	if err != nil {
 		return err
@@ -51,9 +52,10 @@ func (s *Server) GetMachineLogs(ctx context.Context, req *connect.Request[nodev1
 	for readStream.Receive() {
 		msg := readStream.Msg()
 		err = writeStream.Send(&nodev1pb.NodeGetMachineLogsResponse{
-			Fd:            msg.Fd,
+			Error:         msg.Error,
 			ContainerName: msg.ContainerName,
 			Content:       msg.Content,
+			Timestamp:     msg.Timestamp,
 		})
 		if err != nil {
 			return err
