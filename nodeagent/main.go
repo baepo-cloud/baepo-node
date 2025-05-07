@@ -12,7 +12,7 @@ import (
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/networkprovider"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/nodeservice"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/runtimeprovider"
-	types2 "github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
+	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/volumeprovider"
 	"github.com/baepo-cloud/baepo-proto/go/baepo/api/v1/apiv1pbconnect"
 	_ "github.com/joho/godotenv/autoload"
@@ -36,15 +36,15 @@ func main() {
 		fxlog.Logger(),
 		fx.Provide(provideConfig),
 		fx.Provide(provideGORM),
-		fx.Provide(fx.Annotate(networkprovider.New, fx.As(new(types2.NetworkProvider)))),
-		fx.Provide(fx.Annotate(imageprovider.New, fx.As(new(types2.ImageProvider)))),
-		fx.Provide(fx.Annotate(runtimeprovider.New, fx.As(new(types2.RuntimeProvider)))),
-		fx.Provide(provideVolumeProvider),
-		fx.Provide(provideApiClient),
-		fx.Provide(fx.Annotate(nodeservice.New, fx.As(new(types2.NodeService)))),
+		fx.Provide(fx.Annotate(networkprovider.New, fx.As(new(types.NetworkProvider)))),
+		fx.Provide(fx.Annotate(imageprovider.New, fx.As(new(types.ImageProvider)))),
+		fx.Provide(fx.Annotate(runtimeprovider.New, fx.As(new(types.RuntimeProvider)))),
+		fx.Provide(fx.Annotate(volumeprovider.New, fx.As(new(types.VolumeProvider)))),
+		fx.Provide(provideControlPlaneApiClient),
+		fx.Provide(fx.Annotate(nodeservice.New, fx.As(new(types.NodeService)))),
 		fx.Provide(apiserver.New),
 		fx.Provide(gatewayserver.New),
-		fx.Invoke(func(lc fx.Lifecycle, service types2.NodeService) {
+		fx.Invoke(func(lc fx.Lifecycle, service types.NodeService) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {
 					return service.Start(ctx)
@@ -77,8 +77,8 @@ func main() {
 	).Run()
 }
 
-func provideConfig() (*types2.NodeServerConfig, error) {
-	config := types2.NodeServerConfig{
+func provideConfig() (*types.Config, error) {
+	config := types.Config{
 		ClusterID:             os.Getenv("NODE_CLUSTER_ID"),
 		BootstrapToken:        os.Getenv("NODE_BOOTSTRAP_TOKEN"),
 		IPAddr:                os.Getenv("NODE_IP_ADDR"),
@@ -89,6 +89,8 @@ func provideConfig() (*types2.NodeServerConfig, error) {
 		InitContainerBinary:   os.Getenv("NODE_INIT_CONTAINER_BINARY"),
 		VMLinux:               os.Getenv("NODE_VM_LINUX"),
 		CloudHypervisorBinary: os.Getenv("NODE_CLOUD_HYPERVISOR_BINARY"),
+		VolumeGroup:           os.Getenv("NODE_VOLUME_GROUP"),
+		ControlPlaneURL:       os.Getenv("NODE_CONTROL_PLANE_URL"),
 	}
 	if config.APIAddr == "" {
 		config.APIAddr = ":3443"
@@ -97,7 +99,7 @@ func provideConfig() (*types2.NodeServerConfig, error) {
 		config.GatewayAddr = ":8443"
 	}
 	if config.StorageDirectory == "" {
-		config.StorageDirectory = "./storage"
+		config.StorageDirectory = "/var/lib/baepo"
 	}
 	if config.InitBinary == "" {
 		config.InitBinary = "./resources/baepo-init"
@@ -110,6 +112,12 @@ func provideConfig() (*types2.NodeServerConfig, error) {
 	}
 	if config.CloudHypervisorBinary == "" {
 		config.CloudHypervisorBinary = "./resources/cloud-hypervisor"
+	}
+	if config.VolumeGroup == "" {
+		config.VolumeGroup = "vg_baepo"
+	}
+	if config.ControlPlaneURL == "" {
+		config.ControlPlaneURL = "https://api.baepo.cloud"
 	}
 	if config.ClusterID == "" {
 		return nil, errors.New("NODE_CLUSTER_ID env variable required")
@@ -135,7 +143,7 @@ func provideConfig() (*types2.NodeServerConfig, error) {
 	return &config, nil
 }
 
-func provideGORM(config *types2.NodeServerConfig) (*gorm.DB, error) {
+func provideGORM(config *types.Config) (*gorm.DB, error) {
 	dbName := "node.db?_busy_timeout=5000&_journal_mode=WAL&_synchronous=NORMAL"
 	db, err := gorm.Open(sqlite.Open(path.Join(config.StorageDirectory, dbName)), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
@@ -144,23 +152,14 @@ func provideGORM(config *types2.NodeServerConfig) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	err = db.AutoMigrate(&types2.Machine{}, &types2.Volume{}, &types2.NetworkInterface{}, &types2.MachineVolume{}, &types2.Image{})
+	err = db.AutoMigrate(&types.Machine{}, &types.Volume{}, &types.NetworkInterface{}, &types.MachineVolume{}, &types.Image{})
 	if err != nil {
 		return nil, err
 	}
 	return db, nil
 }
 
-func provideVolumeProvider(db *gorm.DB) types2.VolumeProvider {
-	vg := os.Getenv("NODE_VOLUME_GROUP")
-	if vg == "" {
-		vg = "vg_baepo"
-	}
-
-	return volumeprovider.New(db, vg)
-}
-
-func provideApiClient() apiv1pbconnect.NodeControllerServiceClient {
+func provideControlPlaneApiClient(config *types.Config) apiv1pbconnect.NodeControllerServiceClient {
 	client := &http.Client{
 		Transport: &http2.Transport{
 			AllowHTTP: true,
@@ -171,6 +170,5 @@ func provideApiClient() apiv1pbconnect.NodeControllerServiceClient {
 			PingTimeout:     60 * time.Second,
 		},
 	}
-
-	return apiv1pbconnect.NewNodeControllerServiceClient(client, "http://localhost:3000")
+	return apiv1pbconnect.NewNodeControllerServiceClient(client, config.ControlPlaneURL)
 }

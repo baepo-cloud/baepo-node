@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/baepo-cloud/baepo-node/core/types"
 	"github.com/baepo-cloud/baepo-node/init/internal/initserver"
+	"github.com/baepo-cloud/baepo-node/init/internal/logservice"
 	"os"
 )
 
@@ -19,8 +20,12 @@ func main() {
 		panic(err)
 	}
 
-	err = initserver.New(config).Run()
+	logService, err := logservice.New("/logs")
 	if err != nil {
+		panic(err)
+	}
+
+	if err = initserver.New(logService, config).Run(); err != nil {
 		panic(err)
 	}
 }

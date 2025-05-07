@@ -24,7 +24,7 @@ type Service struct {
 	networkProvider       types.NetworkProvider
 	runtimeProvider       types.RuntimeProvider
 	imageProvider         types.ImageProvider
-	config                *types.NodeServerConfig
+	config                *types.Config
 	authorityCert         *x509.Certificate
 	tlsCert               *tls.Certificate
 	ctx                   context.Context
@@ -43,7 +43,7 @@ func New(
 	networkProvider types.NetworkProvider,
 	runtimeProvider types.RuntimeProvider,
 	imageProvider types.ImageProvider,
-	config *types.NodeServerConfig,
+	config *types.Config,
 ) *Service {
 	return &Service{
 		log:                   slog.With(slog.String("component", "nodeservice")),

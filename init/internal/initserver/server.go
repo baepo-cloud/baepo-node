@@ -15,22 +15,32 @@ import (
 	"os/exec"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
-type Server struct {
-	config  coretypes.InitConfig
-	logger  *slog.Logger
-	errChan chan error
-}
+type (
+	Server struct {
+		config     coretypes.InitConfig
+		logger     *slog.Logger
+		errChan    chan error
+		containers map[string]*Container
+		logService types.LogService
+	}
+
+	Container struct {
+		cmd    *exec.Cmd
+		config coretypes.InitContainerConfig
+	}
+)
 
 var _ types.InitService = (*Server)(nil)
 
-func New(config coretypes.InitConfig) *Server {
+func New(logService types.LogService, config coretypes.InitConfig) *Server {
 	return &Server{
-		config:  config,
-		logger:  slog.Default(),
-		errChan: make(chan error, 1),
+		config:     config,
+		logger:     slog.Default(),
+		errChan:    make(chan error, 1),
+		containers: map[string]*Container{},
+		logService: logService,
 	}
 }
 
@@ -61,10 +71,11 @@ func (s *Server) Run() error {
 		select {
 		case err = <-s.errChan:
 			running = false
-			//case sig := <-sigChan:
-			//	_ = init.cmd.Process.Signal(sig)
+		case sig := <-sigChan:
+			for _, ctr := range s.containers {
+				_ = ctr.cmd.Process.Signal(sig)
+			}
 		}
-		time.Sleep(10 * time.Second)
 	}
 
 	slog.Error("shutting down", slog.Any("error", err))
@@ -85,7 +96,7 @@ func (s *Server) startHttpServer() error {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle(nodev1pbconnect.NewInitHandler(connecthandler.NewInitServiceServer(s)))
+	mux.Handle(nodev1pbconnect.NewInitHandler(connecthandler.NewInitServiceServer(s, s.logService)))
 	server := &http.Server{Handler: mux}
 	return server.Serve(ln)
 }
@@ -97,12 +108,16 @@ func (s *Server) startContainer(config coretypes.InitContainerConfig) {
 		return
 	}
 
-	cmd := exec.Command("/initcontainer", string(jsonConfig))
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err = cmd.Start(); err != nil {
+	ctr := &Container{
+		cmd:    exec.Command("/initcontainer", string(jsonConfig)),
+		config: config,
+	}
+	ctr.cmd.Stdin = os.Stdin
+	ctr.cmd.Stdout, ctr.cmd.Stderr = s.logService.NewContainerLogWriter(config)
+	if err = ctr.cmd.Start(); err != nil {
 		s.errChan <- err
 		return
 	}
+
+	s.containers[config.Name] = ctr
 }

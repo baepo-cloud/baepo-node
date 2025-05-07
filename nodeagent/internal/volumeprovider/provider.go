@@ -16,10 +16,10 @@ type Provider struct {
 
 var _ types.VolumeProvider = (*Provider)(nil)
 
-func New(db *gorm.DB, volumeGroup string) *Provider {
+func New(db *gorm.DB, config *types.Config) *Provider {
 	return &Provider{
 		db:          db,
-		volumeGroup: volumeGroup,
+		volumeGroup: config.VolumeGroup,
 	}
 }
 

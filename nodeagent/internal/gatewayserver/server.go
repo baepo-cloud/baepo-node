@@ -12,11 +12,11 @@ import (
 
 type Server struct {
 	service    types.NodeService
-	config     *types.NodeServerConfig
+	config     *types.Config
 	httpServer *http.Server
 }
 
-func New(service types.NodeService, config *types.NodeServerConfig) *Server {
+func New(service types.NodeService, config *types.Config) *Server {
 	return &Server{
 		service: service,
 		config:  config,

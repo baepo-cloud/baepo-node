@@ -6,11 +6,15 @@ import (
 )
 
 type InitServiceHandler struct {
-	init types.InitService
+	init       types.InitService
+	logService types.LogService
 }
 
 var _ nodev1pbconnect.InitHandler = (*InitServiceHandler)(nil)
 
-func NewInitServiceServer(init types.InitService) *InitServiceHandler {
-	return &InitServiceHandler{init: init}
+func NewInitServiceServer(init types.InitService, logService types.LogService) *InitServiceHandler {
+	return &InitServiceHandler{
+		init:       init,
+		logService: logService,
+	}
 }

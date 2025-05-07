@@ -34,6 +34,35 @@ func (s *Server) GetMachine(ctx context.Context, req *connect.Request[nodev1pb.N
 	}), nil
 }
 
+func (s *Server) GetMachineLogs(ctx context.Context, req *connect.Request[nodev1pb.NodeGetMachineLogsRequest], writeStream *connect.ServerStream[nodev1pb.NodeGetMachineLogsResponse]) error {
+	machine, err := s.service.FindMachine(ctx, req.Msg.MachineId)
+	if err != nil {
+		return err
+	}
+
+	client := s.runtimeProvider.NewInitClient(machine.ID)
+	readStream, err := client.GetLogs(ctx, connect.NewRequest(&nodev1pb.InitGetLogsRequest{
+		ContainerName: req.Msg.ContainerName,
+	}))
+	if err != nil {
+		return err
+	}
+
+	for readStream.Receive() {
+		msg := readStream.Msg()
+		err = writeStream.Send(&nodev1pb.NodeGetMachineLogsResponse{
+			Fd:            msg.Fd,
+			ContainerName: msg.ContainerName,
+			Content:       msg.Content,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (s *Server) adaptMachine(machine *types.Machine) *nodev1pb.Machine {
 	return &nodev1pb.Machine{
 		MachineId:    machine.ID,

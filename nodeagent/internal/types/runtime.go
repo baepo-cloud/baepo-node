@@ -1,6 +1,9 @@
 package types
 
-import "context"
+import (
+	"context"
+	"github.com/baepo-cloud/baepo-proto/go/baepo/node/v1/nodev1pbconnect"
+)
 
 type (
 	RuntimeCreateOptions struct {
@@ -20,5 +23,7 @@ type (
 		Terminate(ctx context.Context, machineID string) error
 
 		Healthcheck(ctx context.Context, machineID string) error
+
+		NewInitClient(machineID string) nodev1pbconnect.InitClient
 	}
 )

@@ -10,22 +10,27 @@ import (
 	"github.com/baepo-cloud/baepo-proto/go/baepo/node/v1/nodev1pbconnect"
 	"github.com/expected-so/canonicallog"
 	"log/slog"
+	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 )
 
 type Server struct {
-	service    types.NodeService
-	config     *types.NodeServerConfig
-	httpServer *http.Server
+	service         types.NodeService
+	runtimeProvider types.RuntimeProvider
+	config          *types.Config
+	httpServer      *http.Server
 }
 
 var _ nodev1pbconnect.NodeServiceHandler = (*Server)(nil)
 
-func New(service types.NodeService, config *types.NodeServerConfig) *Server {
+func New(service types.NodeService, runtimeProvider types.RuntimeProvider, config *types.Config) *Server {
 	return &Server{
-		service: service,
-		config:  config,
+		service:         service,
+		runtimeProvider: runtimeProvider,
+		config:          config,
 	}
 }
 
@@ -38,30 +43,38 @@ func (s *Server) Start(ctx context.Context) error {
 	s.httpServer = &http.Server{
 		Addr:    s.config.APIAddr,
 		Handler: mux,
-		TLSConfig: &tls.Config{
-			GetConfigForClient: func(info *tls.ClientHelloInfo) (*tls.Config, error) {
-				config := &tls.Config{
-					ClientAuth: tls.RequireAndVerifyClientCert,
-					MinVersion: tls.VersionTLS12,
-				}
-				if cert := s.service.TLSCertificate(); cert != nil {
-					config.Certificates = []tls.Certificate{*cert}
-				}
-				if cert := s.service.AuthorityCertificate(); cert != nil {
-					config.ClientCAs = x509.NewCertPool()
-					config.ClientCAs.AddCert(s.service.AuthorityCertificate())
-				}
-				return config, nil
-			},
-		},
 	}
 
-	lis, err := tls.Listen("tcp", s.httpServer.Addr, s.httpServer.TLSConfig)
+	unixSocket := filepath.Join(s.config.StorageDirectory, "agent.sock")
+	_ = os.Remove(unixSocket)
+	unixListener, err := net.Listen("unix", unixSocket)
+	if err != nil {
+		return fmt.Errorf("failed to setup unix socket: %w", err)
+	}
+
+	tcpListener, err := tls.Listen("tcp", s.httpServer.Addr, &tls.Config{
+		GetConfigForClient: func(info *tls.ClientHelloInfo) (*tls.Config, error) {
+			config := &tls.Config{
+				ClientAuth: tls.RequireAndVerifyClientCert,
+				MinVersion: tls.VersionTLS12,
+			}
+			if cert := s.service.TLSCertificate(); cert != nil {
+				config.Certificates = []tls.Certificate{*cert}
+			}
+			if cert := s.service.AuthorityCertificate(); cert != nil {
+				config.ClientCAs = x509.NewCertPool()
+				config.ClientCAs.AddCert(s.service.AuthorityCertificate())
+			}
+			return config, nil
+		},
+	})
 	if err != nil {
 		return fmt.Errorf("failed to setup listener for api server: %w", err)
 	}
 
-	go s.httpServer.Serve(lis)
+	go s.httpServer.Serve(tcpListener)
+	go s.httpServer.Serve(unixListener)
+
 	return nil
 }
 

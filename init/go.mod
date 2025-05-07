@@ -7,7 +7,7 @@ replace github.com/baepo-cloud/baepo-node/core => ../core
 require (
 	connectrpc.com/connect v1.18.1
 	github.com/baepo-cloud/baepo-node/core v0.0.0-00010101000000-000000000000
-	github.com/baepo-cloud/baepo-proto/go v0.0.0-20250505095919-e0e3d091c78f
+	github.com/baepo-cloud/baepo-proto/go v0.0.0-20250507073228-f3fba591062a
 	github.com/vishvananda/netlink v1.3.0
 	golang.org/x/sys v0.32.0
 	google.golang.org/protobuf v1.36.6

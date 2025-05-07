@@ -1,6 +1,6 @@
 package types
 
-type NodeServerConfig struct {
+type Config struct {
 	ClusterID             string
 	BootstrapToken        string
 	IPAddr                string
@@ -11,4 +11,6 @@ type NodeServerConfig struct {
 	InitContainerBinary   string
 	VMLinux               string
 	CloudHypervisorBinary string
+	VolumeGroup           string
+	ControlPlaneURL       string
 }
