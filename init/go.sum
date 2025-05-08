@@ -6,6 +6,8 @@ github.com/baepo-cloud/baepo-proto/go v0.0.0-20250507073228-f3fba591062a h1:7cok
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250507073228-f3fba591062a/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250507152536-59677dca669f h1:Fok9h01YEJKUVsvhMgY5jj5yvQRVIg5LLIpOZHNzzE8=
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250507152536-59677dca669f/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
+github.com/baepo-cloud/baepo-proto/go v0.0.0-20250508080114-4126d1786353 h1:dinImnE+f4dd5waaY1bBkTzpP/ss3rm9q6UfEHUkwOQ=
+github.com/baepo-cloud/baepo-proto/go v0.0.0-20250508080114-4126d1786353/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
 github.com/google/go-cmp v0.5.9 h1:O2Tfq5qg4qc4AmwVlvv0oLiVAGB7enBSJ2x2DqQFi38=
 github.com/google/go-cmp v0.5.9/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 github.com/mdlayher/socket v0.4.1 h1:eM9y2/jlbs1M615oshPQOHZzj6R6wMT7bX5NPiQvn2U=

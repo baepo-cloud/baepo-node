@@ -28,8 +28,10 @@ func New(config types.InitContainerConfig) *Container {
 }
 
 func (c *Container) Start() error {
-	if err := c.setupFilesystem(); err != nil {
-		return fmt.Errorf("failed to setup filesystem: %w", err)
+	if _, err := os.Stat(c.rootDir); os.IsNotExist(err) {
+		if err = c.setupFilesystem(); err != nil {
+			return fmt.Errorf("failed to setup filesystem: %w", err)
+		}
 	}
 
 	if err := c.setupNetworking(); err != nil {

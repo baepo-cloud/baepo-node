@@ -8,6 +8,8 @@ github.com/baepo-cloud/baepo-proto/go v0.0.0-20250424105229-be8a22cfd37d h1:JDcm
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250424105229-be8a22cfd37d/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250507152536-59677dca669f h1:Fok9h01YEJKUVsvhMgY5jj5yvQRVIg5LLIpOZHNzzE8=
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250507152536-59677dca669f/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
+github.com/baepo-cloud/baepo-proto/go v0.0.0-20250508080114-4126d1786353 h1:dinImnE+f4dd5waaY1bBkTzpP/ss3rm9q6UfEHUkwOQ=
+github.com/baepo-cloud/baepo-proto/go v0.0.0-20250508080114-4126d1786353/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
