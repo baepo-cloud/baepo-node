@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
 type Provider struct {
@@ -30,16 +31,24 @@ func New(config *types.Config) *Provider {
 }
 
 func (p *Provider) NewInitClient(machineID string) (nodev1pbconnect.InitClient, func()) {
-	conn, err := vsock.Dial(p.getInitDaemonSocketPath(machineID), coretypes.InitServerPort)
+	var conns []net.Conn
 	httpClient := &http.Client{
 		Transport: &http.Transport{
-			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				return conn, err
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				conn, err := vsock.DialContext(ctx, p.getInitDaemonSocketPath(machineID), coretypes.InitServerPort)
+				if err != nil {
+					return nil, err
+				}
+
+				conns = append(conns, conn)
+				return conn, nil
 			},
+			IdleConnTimeout:       10 * time.Second,
+			ResponseHeaderTimeout: 5 * time.Second,
 		},
 	}
 	return nodev1pbconnect.NewInitClient(httpClient, "http://init"), func() {
-		if conn != nil {
+		for _, conn := range conns {
 			_ = conn.Close()
 		}
 	}

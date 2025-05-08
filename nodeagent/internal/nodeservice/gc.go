@@ -21,7 +21,7 @@ func (s *Service) startGCWorker() {
 func (s *Service) performGC() {
 	startedAt := time.Now()
 	s.log.Info("performing garbage collection")
-	
+
 	err := s.runtimeProvider.GC(context.Background(), func() []string {
 		s.machineControllerLock.RLock()
 		defer s.machineControllerLock.RUnlock()

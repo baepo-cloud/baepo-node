@@ -13,16 +13,24 @@ type Service struct {
 	containers            map[string]*Container
 	eventBus              *eventbus.Bus[any]
 	cancelEventDispatcher context.CancelFunc
+	previousEventsMutex   sync.RWMutex
+	previousEvents        []any
 }
 
 var _ types.ContainerService = (*Service)(nil)
 
 func New(logService types.LogService) *Service {
-	return &Service{
+	srv := &Service{
 		logService: logService,
 		containers: map[string]*Container{},
 		eventBus:   eventbus.NewBus[any](),
 	}
+	srv.eventBus.SubscribeToEvents(func(ctx context.Context, event any) {
+		srv.previousEventsMutex.Lock()
+		defer srv.previousEventsMutex.Unlock()
+		srv.previousEvents = append(srv.previousEvents, event)
+	})
+	return srv
 }
 
 func (s *Service) Start() {
@@ -46,6 +54,15 @@ func (s *Service) Events(ctx context.Context) <-chan any {
 		case events <- event:
 		}
 	})
+
+	go func() {
+		s.previousEventsMutex.RLock()
+		defer s.previousEventsMutex.RUnlock()
+
+		for _, event := range s.previousEvents {
+			events <- event
+		}
+	}()
 
 	go func() {
 		defer close(events)

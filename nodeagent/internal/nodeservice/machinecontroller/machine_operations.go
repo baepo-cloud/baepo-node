@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	"github.com/nrednav/cuid2"
+	"slices"
 	"time"
 )
 
@@ -25,7 +26,16 @@ func (c *Controller) prepareMachine(ctx context.Context) error {
 
 func (c *Controller) prepareMachineVolumes(ctx context.Context) error {
 	machine := c.GetMachine()
+	currentVolumes := map[string]*types.MachineVolume{}
+	for _, volume := range machine.Volumes {
+		currentVolumes[volume.Container] = volume
+	}
+
 	for index, ctr := range machine.Spec.Containers {
+		if _, ok := currentVolumes[ctr.Name]; ok {
+			continue
+		}
+
 		image, err := c.imageProvider.Fetch(ctx, types.ImageFetchOptions{
 			Image: ctr.Image,
 		})
@@ -67,15 +77,20 @@ func (c *Controller) prepareMachineVolumes(ctx context.Context) error {
 }
 
 func (c *Controller) prepareMachineNetwork(ctx context.Context) error {
+	machine := c.GetMachine()
+	if machine.NetworkInterface != nil {
+		return nil
+	}
+
 	machineNetwork, err := c.networkProvider.AllocateInterface(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to allocate machine network: %w", err)
 	}
 
 	err = c.updateMachine(func(machine *types.Machine) error {
+		machine.NetworkInterfaceID = &machine.ID
 		machine.NetworkInterface = machineNetwork
-		machine.NetworkInterface.MachineID = &machine.ID
-		return c.db.WithContext(ctx).Select("MachineID").Save(machine.NetworkInterface).Error
+		return c.db.WithContext(ctx).Select("NetworkInterfaceID").Save(machine).Error
 	})
 	if err != nil {
 		return fmt.Errorf("failed to claim network interface for a machine: %w", err)
@@ -110,19 +125,21 @@ func (c *Controller) terminateMachine(ctx context.Context) error {
 
 		_ = c.updateMachine(func(machine *types.Machine) error {
 			machine.NetworkInterface = nil
-			return nil
+			machine.NetworkInterfaceID = nil
+			return c.db.WithContext(ctx).Select("NetworkInterfaceID").Save(machine).Error
 		})
 	}
 
-	for _, machineVolume := range machine.Volumes {
+	for index, machineVolume := range machine.Volumes {
 		if err := c.volumeProvider.Delete(ctx, machineVolume.Volume); err != nil {
 			return err
 		}
+
+		_ = c.updateMachine(func(machine *types.Machine) error {
+			machine.Volumes = slices.Delete(machine.Volumes, index, index)
+			return c.db.WithContext(ctx).Delete(&machineVolume).Error
+		})
 	}
-	_ = c.updateMachine(func(machine *types.Machine) error {
-		machine.Volumes = []*types.MachineVolume{}
-		return nil
-	})
 
 	return nil
 }

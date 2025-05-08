@@ -50,7 +50,7 @@ func (c *Controller) listenToInitEvents(ctx context.Context, machineID string) {
 			return
 		case <-ticker.C:
 			if err := c.handleInitEventStream(ctx, machineID, &consecutiveErrorCount); err != nil {
-				c.log.Error("init event stream handler failed",
+				c.log.Debug("init event stream handler failed",
 					slog.Any("error", err),
 					slog.Int("consecutive-error", consecutiveErrorCount))
 				if consecutiveErrorCount >= 3 {
@@ -84,7 +84,8 @@ func (c *Controller) handleInitEventStream(ctx context.Context, machineID string
 			hasReceived = true
 		}
 
-		fmt.Println(stream.Msg())
+		msg := stream.Msg()
+		c.log.Debug("received event from init", slog.Any("event", msg))
 		//c.eventBus.PublishEvent(stream.Msg())
 	}
 

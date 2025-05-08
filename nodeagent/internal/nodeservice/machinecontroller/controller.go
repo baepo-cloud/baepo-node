@@ -13,21 +13,21 @@ import (
 )
 
 type Controller struct {
-	log                   *slog.Logger
-	db                    *gorm.DB
-	volumeProvider        types.VolumeProvider
-	networkProvider       types.NetworkProvider
-	runtimeProvider       types.RuntimeProvider
-	imageProvider         types.ImageProvider
-	machine               *types.Machine
-	initListenerMutex     sync.Mutex
-	cancelInitListener    context.CancelFunc
-	machineMutex          sync.RWMutex
-	reconcileToState      types.MachineDesiredState
-	reconciliationMutex   sync.Mutex
-	cancelReconciliation  func()
-	eventBus              *eventbus.Bus[*corev1pb.MachineEvent]
-	eventCancelDispatcher context.CancelFunc
+	log                        *slog.Logger
+	db                         *gorm.DB
+	volumeProvider             types.VolumeProvider
+	networkProvider            types.NetworkProvider
+	runtimeProvider            types.RuntimeProvider
+	imageProvider              types.ImageProvider
+	machine                    *types.Machine
+	initListenerMutex          sync.Mutex
+	cancelInitListener         context.CancelFunc
+	machineMutex               sync.RWMutex
+	currentStateReconciliation *types.MachineDesiredState
+	reconciliationMutex        sync.Mutex
+	cancelReconciliation       func()
+	eventBus                   *eventbus.Bus[*corev1pb.MachineEvent]
+	eventCancelDispatcher      context.CancelFunc
 }
 
 func New(

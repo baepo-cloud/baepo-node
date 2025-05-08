@@ -13,7 +13,8 @@ func (c *Controller) startReconciliation() {
 	defer c.reconciliationMutex.Unlock()
 
 	machine := c.GetMachine()
-	if c.cancelReconciliation != nil && c.reconcileToState == machine.DesiredState {
+	if c.cancelReconciliation != nil && c.currentStateReconciliation != nil &&
+		*c.currentStateReconciliation == machine.DesiredState {
 		return
 	}
 
@@ -26,7 +27,7 @@ func (c *Controller) startReconciliation() {
 		slog.String("desired", string(machine.DesiredState)))
 	startedAt := time.Now()
 	reconcileCtx, cancel := context.WithCancel(context.Background())
-	c.reconcileToState = machine.DesiredState
+	c.currentStateReconciliation = &machine.DesiredState
 	c.cancelReconciliation = func() {
 		cancel()
 		c.cancelReconciliation = nil
@@ -46,6 +47,7 @@ func (c *Controller) startReconciliation() {
 					continue
 				}
 
+				c.currentStateReconciliation = nil
 				log.Info("machine state reconciled")
 				return
 			}

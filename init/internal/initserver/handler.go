@@ -32,6 +32,8 @@ func (s InitServiceServer) Start() error {
 
 	mux := http.NewServeMux()
 	mux.Handle(nodev1pbconnect.NewInitHandler(s))
-	server := &http.Server{Handler: mux}
+	server := &http.Server{
+		Handler: mux,
+	}
 	return server.Serve(ln)
 }

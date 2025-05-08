@@ -13,15 +13,16 @@ type (
 	MachineDesiredState string
 
 	Machine struct {
-		ID               string `gorm:"primaryKey"`
-		State            MachineState
-		DesiredState     MachineDesiredState
-		RuntimePID       *int `gorm:"column:runtime_pid"`
-		Spec             *MachineSpec
-		NetworkInterface *NetworkInterface
-		Volumes          []*MachineVolume
-		CreatedAt        time.Time
-		TerminatedAt     *time.Time
+		ID                 string `gorm:"primaryKey"`
+		State              MachineState
+		DesiredState       MachineDesiredState
+		RuntimePID         *int `gorm:"column:runtime_pid"`
+		Spec               *MachineSpec
+		NetworkInterfaceID *string
+		NetworkInterface   *NetworkInterface
+		Volumes            []*MachineVolume
+		CreatedAt          time.Time
+		TerminatedAt       *time.Time
 	}
 
 	MachineVolume struct {

@@ -43,9 +43,9 @@ func main() {
 
 	errChan := make(chan error, 1)
 	for _, containerConfig := range config.Containers {
-		go func() {
-			errChan <- containerService.StartContainer(containerConfig)
-		}()
+		if err = containerService.StartContainer(containerConfig); err != nil {
+			panic(err)
+		}
 	}
 
 	initServer := initserver.New(containerService, logService)
