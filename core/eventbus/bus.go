@@ -15,8 +15,8 @@ type Bus[T any] struct {
 
 func NewBus[T any]() *Bus[T] {
 	return &Bus[T]{
-		eventsChan:        nil,
-		eventHandlers:     nil,
+		eventsChan:        make(chan T),
+		eventHandlers:     make(map[string]func(context.Context, T)),
 		eventHandlersLock: sync.RWMutex{},
 	}
 }

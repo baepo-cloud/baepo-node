@@ -18,7 +18,7 @@ import (
 
 type Container struct {
 	config           coretypes.InitContainerConfig
-	eventBus         *eventbus.Bus[types.ContainerEvent]
+	eventBus         *eventbus.Bus[any]
 	stdout           io.Writer
 	stderr           io.Writer
 	cmd              *exec.Cmd

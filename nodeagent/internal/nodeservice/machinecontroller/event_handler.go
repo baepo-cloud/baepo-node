@@ -15,8 +15,6 @@ func (c *Controller) handleEvent(ctx context.Context, unknownEvent *corev1pb.Mac
 		c.handleDesiredStateChange(ctx, event)
 	case *corev1pb.MachineEvent_StateChangedEvent:
 		c.handleStateChange(ctx, event)
-	case *corev1pb.MachineEvent_HealthcheckEvent:
-		c.handleHealthcheck(ctx, event)
 	}
 }
 
@@ -53,30 +51,13 @@ func (c *Controller) handleStateChange(ctx context.Context, event *corev1pb.Mach
 		go c.startReconciliation()
 	}
 
-	c.syncMonitoring()
-}
-
-func (c *Controller) handleHealthcheck(ctx context.Context, event *corev1pb.MachineEvent_HealthcheckEvent) {
-	if event.HealthcheckEvent.Error != nil {
-		c.log.Warn("machine healthcheck failed", slog.Any("error", *event.HealthcheckEvent.Error))
-		c.monitoringConsecutiveErrorCount++
-
-		if c.monitoringConsecutiveErrorCount >= 3 {
-			c.dispatchMachineStateChangeEvent(types.MachineStateError)
-		} else if c.monitoringConsecutiveErrorCount > 0 {
-			c.dispatchMachineStateChangeEvent(types.MachineStateDegraded)
-		}
-		return
-	}
-
-	c.monitoringConsecutiveErrorCount = 0
-	c.dispatchMachineStateChangeEvent(types.MachineStateRunning)
+	c.syncInitEventsListener()
 }
 
 func (c *Controller) dispatchMachineStateChangeEvent(state types.MachineState) {
 	machine := c.GetMachine()
 	if machine.State != state {
-		c.PublishEvent(&corev1pb.MachineEvent{
+		c.eventBus.PublishEvent(&corev1pb.MachineEvent{
 			Timestamp: timestamppb.Now(),
 			MachineId: machine.ID,
 			Event: &corev1pb.MachineEvent_StateChangedEvent{

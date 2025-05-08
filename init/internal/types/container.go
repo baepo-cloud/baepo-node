@@ -6,12 +6,6 @@ import (
 )
 
 type (
-	ContainerEventType string
-
-	ContainerEvent interface {
-		Type() ContainerEventType
-	}
-
 	ContainerStateChangedEvent struct {
 		ContainerName    string
 		Healthy          bool
@@ -25,14 +19,6 @@ type (
 	}
 
 	ContainerService interface {
-		Events(ctx context.Context) <-chan ContainerEvent
+		Events(ctx context.Context) <-chan any
 	}
 )
-
-const (
-	ContainerStateChangedEventType ContainerEventType = "container_state_changed"
-)
-
-func (ContainerStateChangedEvent) Type() ContainerEventType {
-	return ContainerStateChangedEventType
-}

@@ -83,3 +83,46 @@ func (c *Controller) prepareMachineNetwork(ctx context.Context) error {
 
 	return nil
 }
+
+func (c *Controller) terminateMachine(ctx context.Context) error {
+	machine := c.GetMachine()
+
+	if machine.RuntimePID != nil && *machine.RuntimePID > 0 {
+		err := c.runtimeProvider.Terminate(ctx, machine.ID)
+		if err != nil {
+			return fmt.Errorf("failed to terminate machine runtime: %w", err)
+		}
+
+		err = c.updateMachine(func(machine *types.Machine) error {
+			machine.RuntimePID = nil
+			return c.db.WithContext(ctx).Select("RuntimePID").Save(machine).Error
+		})
+		if err != nil {
+			return fmt.Errorf("failed to clear machine runtime pid: %w", err)
+		}
+	}
+
+	if machine.NetworkInterface != nil {
+		err := c.networkProvider.ReleaseInterface(ctx, machine.NetworkInterface.Name)
+		if err != nil {
+			return err
+		}
+
+		_ = c.updateMachine(func(machine *types.Machine) error {
+			machine.NetworkInterface = nil
+			return nil
+		})
+	}
+
+	for _, machineVolume := range machine.Volumes {
+		if err := c.volumeProvider.Delete(ctx, machineVolume.Volume); err != nil {
+			return err
+		}
+	}
+	_ = c.updateMachine(func(machine *types.Machine) error {
+		machine.Volumes = []*types.MachineVolume{}
+		return nil
+	})
+
+	return nil
+}

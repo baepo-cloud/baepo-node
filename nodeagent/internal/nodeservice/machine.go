@@ -4,10 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/nodeservice/machinecontroller"
-	"github.com/baepo-cloud/baepo-node/nodeagent/internal/pbadapter"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	corev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/core/v1"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"log/slog"
 )
 
@@ -101,17 +99,6 @@ func (s *Service) UpdateMachineDesiredState(ctx context.Context, opts types.Node
 		return nil, types.ErrMachineNotFound
 	}
 
-	s.log.Info("requesting new machine desired state",
-		slog.String("machine-id", opts.MachineID),
-		slog.Any("desired-state", opts.DesiredState))
-	ctrl.PublishEvent(&corev1pb.MachineEvent{
-		Timestamp: timestamppb.Now(),
-		MachineId: opts.MachineID,
-		Event: &corev1pb.MachineEvent_DesiredStateChangedEvent{
-			DesiredStateChangedEvent: &corev1pb.MachineEvent_DesiredStateChanged{
-				DesiredState: pbadapter.MachineDesiredStateToProto(opts.DesiredState),
-			},
-		},
-	})
+	ctrl.SetDesiredState(opts.DesiredState)
 	return ctrl.GetMachine(), nil
 }

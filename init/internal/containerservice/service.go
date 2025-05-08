@@ -11,7 +11,7 @@ type Service struct {
 	logService            types.LogService
 	containersMutex       sync.RWMutex
 	containers            map[string]*Container
-	eventBus              *eventbus.Bus[types.ContainerEvent]
+	eventBus              *eventbus.Bus[any]
 	cancelEventDispatcher context.CancelFunc
 }
 
@@ -21,7 +21,7 @@ func New(logService types.LogService) *Service {
 	return &Service{
 		logService: logService,
 		containers: map[string]*Container{},
-		eventBus:   eventbus.NewBus[types.ContainerEvent](),
+		eventBus:   eventbus.NewBus[any](),
 	}
 }
 
@@ -37,9 +37,9 @@ func (s *Service) Stop() {
 	}
 }
 
-func (s *Service) Events(ctx context.Context) <-chan types.ContainerEvent {
-	events := make(chan types.ContainerEvent)
-	cancel := s.eventBus.SubscribeToEvents(func(ctx context.Context, event types.ContainerEvent) {
+func (s *Service) Events(ctx context.Context) <-chan any {
+	events := make(chan any)
+	cancel := s.eventBus.SubscribeToEvents(func(ctx context.Context, event any) {
 		select {
 		case <-ctx.Done():
 			return

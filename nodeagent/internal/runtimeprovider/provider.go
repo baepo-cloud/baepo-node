@@ -29,15 +29,20 @@ func New(config *types.Config) *Provider {
 	return &Provider{config: config}
 }
 
-func (p *Provider) NewInitClient(machineID string) nodev1pbconnect.InitClient {
+func (p *Provider) NewInitClient(machineID string) (nodev1pbconnect.InitClient, func()) {
+	conn, err := vsock.Dial(p.getInitDaemonSocketPath(machineID), coretypes.InitServerPort)
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				return vsock.Dial(p.getInitDaemonSocketPath(machineID), coretypes.InitServerPort)
+				return conn, err
 			},
 		},
 	}
-	return nodev1pbconnect.NewInitClient(httpClient, "http://init")
+	return nodev1pbconnect.NewInitClient(httpClient, "http://init"), func() {
+		if conn != nil {
+			_ = conn.Close()
+		}
+	}
 }
 
 func (p *Provider) newCloudHypervisorHTTPClient(machineID string) (*chclient.ClientWithResponses, error) {

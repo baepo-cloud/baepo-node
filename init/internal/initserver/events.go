@@ -24,7 +24,7 @@ func (s InitServiceServer) Events(ctx context.Context, _ *connect.Request[emptyp
 	return nil
 }
 
-func adaptContainerEventToProto(event types.ContainerEvent) *nodev1pb.InitEventsResponse {
+func adaptContainerEventToProto(event any) *nodev1pb.InitEventsResponse {
 	switch value := event.(type) {
 	case *types.ContainerStateChangedEvent:
 		proto := &nodev1pb.InitEventsResponse_ContainerStateChangedEvent{

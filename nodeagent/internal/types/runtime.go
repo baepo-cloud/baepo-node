@@ -22,8 +22,6 @@ type (
 
 		Terminate(ctx context.Context, machineID string) error
 
-		Healthcheck(ctx context.Context, machineID string) error
-
-		NewInitClient(machineID string) nodev1pbconnect.InitClient
+		NewInitClient(machineID string) (nodev1pbconnect.InitClient, func())
 	}
 )

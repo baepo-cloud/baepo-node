@@ -87,11 +87,18 @@ func (c *Controller) reconcileToPendingState(ctx context.Context) error {
 }
 
 func (c *Controller) reconcileToRunningState(ctx context.Context) error {
+	machine := c.GetMachine()
+	if machine.State == types.MachineStateError {
+		if err := c.terminateMachine(ctx); err != nil {
+			return fmt.Errorf("failed to terminate machine: %w", err)
+		}
+	}
+
 	if err := c.prepareMachine(ctx); err != nil {
 		return err
 	}
 
-	machine := c.GetMachine()
+	machine = c.GetMachine()
 	pid, err := c.runtimeProvider.Create(ctx, types.RuntimeCreateOptions{
 		MachineID:        machine.ID,
 		Spec:             *machine.Spec,
@@ -121,36 +128,9 @@ func (c *Controller) reconcileToRunningState(ctx context.Context) error {
 
 func (c *Controller) reconcileToTerminatedState(ctx context.Context) error {
 	c.dispatchMachineStateChangeEvent(types.MachineStateTerminating)
-
-	machine := c.GetMachine()
-	if machine.RuntimePID != nil && *machine.RuntimePID > 0 {
-		err := c.runtimeProvider.Terminate(ctx, machine.ID)
-		if err != nil {
-			return fmt.Errorf("failed to terminate machine runtime: %w", err)
-		}
-
-		err = c.updateMachine(func(machine *types.Machine) error {
-			machine.RuntimePID = nil
-			return c.db.WithContext(ctx).Select("RuntimePID").Save(machine).Error
-		})
-		if err != nil {
-			return fmt.Errorf("failed to clear machine runtime pid: %w", err)
-		}
+	if err := c.terminateMachine(ctx); err != nil {
+		return fmt.Errorf("failed to terminate machine: %w", err)
 	}
-
-	if machine.NetworkInterface != nil {
-		err := c.networkProvider.ReleaseInterface(ctx, machine.NetworkInterface.Name)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, machineVolume := range machine.Volumes {
-		if err := c.volumeProvider.Delete(ctx, machineVolume.Volume); err != nil {
-			return err
-		}
-	}
-
 	c.dispatchMachineStateChangeEvent(types.MachineStateTerminated)
 	return nil
 }

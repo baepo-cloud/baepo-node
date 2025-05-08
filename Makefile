@@ -1,8 +1,6 @@
-DIRS := init nodeagent nodeagentctl
-
 all: build-initcontainer build-init
 
-.PHONY: all
+.PHONY: all tidy
 
 build-initcontainer:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o resources/baepo-initcontainer -ldflags "-s -w" initcontainer/main.go
@@ -21,9 +19,14 @@ upgrade-proto-version:
 	@echo "Usage: make upgrade-proto-version COMMIT=<commit-hash>"
 ifdef COMMIT
 	@echo "Upgrading to commit $(COMMIT) in all modules..."
-	@for dir in $(DIRS); do \
+	@for dir in init nodeagent nodeagentctl; do \
 		echo "Upgrading in $$dir..."; \
 		cd $$dir && go get -u github.com/baepo-cloud/baepo-proto/go@$(COMMIT) && cd ..; \
 	done
 	@echo "All modules updated successfully!"
 endif
+
+tidy:
+	@echo "Tidying dependencies in all modules..."
+	@find . -name "go.mod" -exec sh -c 'cd "$$(dirname {})" && echo "Tidying in $$(dirname {})" && go mod tidy' \;
+	@echo "All modules tidied successfully!"

@@ -39,6 +39,8 @@ func main() {
 	}
 
 	containerService := containerservice.New(logService)
+	containerService.Start()
+
 	errChan := make(chan error, 1)
 	for _, containerConfig := range config.Containers {
 		go func() {
@@ -65,6 +67,7 @@ func main() {
 		}
 	}
 
+	//containerService.Stop()
 	//slog.Error("shutting down", slog.Any("error", err))
 	//syscall.Sync()
 	//_ = syscall.Reboot(syscall.LINUX_REBOOT_CMD_POWER_OFF)
