@@ -152,7 +152,14 @@ func provideGORM(config *types.Config) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	err = db.AutoMigrate(&types.Machine{}, &types.Volume{}, &types.NetworkInterface{}, &types.MachineVolume{}, &types.Image{})
+	err = db.AutoMigrate(
+		&types.Volume{},
+		&types.Image{},
+		&types.NetworkInterface{},
+		&types.Machine{},
+		&types.MachineVolume{},
+		&types.Container{},
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -75,23 +75,39 @@ func ProtoToMachineDesiredState(state corev1pb.MachineDesiredState) types.Machin
 
 func ProtoToMachineSpec(specPb *corev1pb.MachineSpec) types.MachineSpec {
 	spec := types.MachineSpec{
-		Cpus:       specPb.Cpus,
-		MemoryMB:   specPb.MemoryMb,
-		Containers: make([]types.MachineContainerSpec, len(specPb.Containers)),
+		Cpus:     specPb.Cpus,
+		MemoryMB: specPb.MemoryMb,
 	}
-	for index, container := range specPb.Containers {
-		containerSpec := types.MachineContainerSpec{
-			Name:    container.Name,
-			Image:   container.Image,
-			Env:     container.Env,
-			Command: container.Command,
-			//Healthcheck: container., todo
-		}
-		if container.WorkingDir != nil {
-			containerSpec.WorkingDir = *container.WorkingDir
-		}
 
-		spec.Containers[index] = containerSpec
+	return spec
+}
+
+func ProtoToContainerSpec(specPb *corev1pb.ContainerSpec) types.ContainerSpec {
+	spec := types.ContainerSpec{
+		Image:   specPb.Image,
+		Env:     specPb.Env,
+		Command: specPb.Command,
+	}
+	if specPb.Name != nil {
+		spec.Name = *specPb.Name
+	}
+	if specPb.WorkingDir != nil {
+		spec.WorkingDir = *specPb.WorkingDir
+	}
+	if specPb.Healthcheck != nil {
+		spec.Healthcheck = &types.ContainerHealthcheckSpec{
+			InitialDelaySeconds: specPb.Healthcheck.InitialDelaySeconds,
+			PeriodSeconds:       specPb.Healthcheck.PeriodSeconds,
+		}
+		switch healthcheckType := specPb.Healthcheck.Type.(type) {
+		case *corev1pb.ContainerHealthcheckSpec_Http:
+			spec.Healthcheck.Http = &types.ContainerHttpHealthcheckSpec{
+				Method:  healthcheckType.Http.Method,
+				Path:    healthcheckType.Http.Path,
+				Port:    healthcheckType.Http.Port,
+				Headers: healthcheckType.Http.Headers,
+			}
+		}
 	}
 	return spec
 }

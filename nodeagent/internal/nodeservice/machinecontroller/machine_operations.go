@@ -26,18 +26,18 @@ func (c *Controller) prepareMachine(ctx context.Context) error {
 
 func (c *Controller) prepareMachineVolumes(ctx context.Context) error {
 	machine := c.GetMachine()
-	currentVolumes := map[string]*types.MachineVolume{}
+	containerVolumes := map[string]*types.MachineVolume{}
 	for _, volume := range machine.Volumes {
-		currentVolumes[volume.Container] = volume
+		containerVolumes[volume.ContainerID] = volume
 	}
 
-	for index, ctr := range machine.Spec.Containers {
-		if _, ok := currentVolumes[ctr.Name]; ok {
+	for index, container := range machine.Containers {
+		if _, ok := containerVolumes[container.ID]; ok {
 			continue
 		}
 
 		image, err := c.imageProvider.Fetch(ctx, types.ImageFetchOptions{
-			Image: ctr.Image,
+			Image: container.Spec.Image,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to fetch image: %w", err)
@@ -52,16 +52,17 @@ func (c *Controller) prepareMachineVolumes(ctx context.Context) error {
 		}
 
 		machineVolume := &types.MachineVolume{
-			ID:        cuid2.Generate(),
-			Position:  index,
-			Container: ctr.Name,
-			MachineID: machine.ID,
-			Machine:   machine,
-			ImageID:   &image.ID,
-			Image:     image,
-			VolumeID:  volume.ID,
-			Volume:    volume,
-			CreatedAt: time.Now(),
+			ID:          cuid2.Generate(),
+			Position:    index,
+			ContainerID: container.ID,
+			Container:   container,
+			MachineID:   machine.ID,
+			Machine:     machine,
+			ImageID:     &image.ID,
+			Image:       image,
+			VolumeID:    volume.ID,
+			Volume:      volume,
+			CreatedAt:   time.Now(),
 		}
 		if err = c.db.WithContext(ctx).Save(&machineVolume).Error; err != nil {
 			return fmt.Errorf("failed to save machine volume: %w", err)

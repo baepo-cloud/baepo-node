@@ -7,7 +7,7 @@ replace github.com/baepo-cloud/baepo-node/core => ../core
 require (
 	connectrpc.com/connect v1.18.1
 	github.com/baepo-cloud/baepo-node/core v0.0.0-00010101000000-000000000000
-	github.com/baepo-cloud/baepo-proto/go v0.0.0-20250508080114-4126d1786353
+	github.com/baepo-cloud/baepo-proto/go v0.0.0-20250517105736-a90dd89a72ed
 	github.com/nrednav/cuid2 v1.0.1
 	github.com/vishvananda/netlink v1.3.0
 	golang.org/x/sys v0.32.0
@@ -20,7 +20,10 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/vishvananda/netns v0.0.4 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
-	golang.org/x/crypto v0.21.0 // indirect
-	golang.org/x/net v0.23.0 // indirect
-	golang.org/x/sync v0.1.0 // indirect
+	golang.org/x/crypto v0.33.0 // indirect
+	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250218202821-56aae31c358a // indirect
+	google.golang.org/grpc v1.72.1 // indirect
 )

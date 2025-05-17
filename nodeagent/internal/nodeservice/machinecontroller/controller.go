@@ -100,8 +100,8 @@ func (c *Controller) SetDesiredState(desiredState types.MachineDesiredState) {
 	c.eventBus.PublishEvent(&corev1pb.MachineEvent{
 		Timestamp: timestamppb.Now(),
 		MachineId: machineID,
-		Event: &corev1pb.MachineEvent_DesiredStateChangedEvent{
-			DesiredStateChangedEvent: &corev1pb.MachineEvent_DesiredStateChanged{
+		Event: &corev1pb.MachineEvent_DesiredStateChanged{
+			DesiredStateChanged: &corev1pb.MachineEvent_DesiredStateChangedEvent{
 				DesiredState: pbadapter.MachineDesiredStateToProto(desiredState),
 			},
 		},

@@ -28,10 +28,10 @@ func adaptContainerEventToProto(event any) *nodev1pb.InitEventsResponse {
 	switch value := event.(type) {
 	case *types.ContainerStateChangedEvent:
 		proto := &nodev1pb.InitEventsResponse_ContainerStateChangedEvent{
-			ContainerName: value.ContainerName,
-			ExitCode:      value.ExitCode,
-			Healthy:       value.Healthy,
-			RestartCount:  value.RestartCount,
+			ContainerId:  value.ContainerID,
+			ExitCode:     value.ExitCode,
+			Healthy:      value.Healthy,
+			RestartCount: value.RestartCount,
 		}
 		if value.StartedAt != nil {
 			proto.StartedAt = timestamppb.New(*value.StartedAt)
@@ -48,11 +48,11 @@ func adaptContainerEventToProto(event any) *nodev1pb.InitEventsResponse {
 
 		switch {
 		case value.ExitedAt != nil:
-			proto.State = corev1pb.MachineContainerState_MachineContainerState_Exited
+			proto.State = corev1pb.ContainerState_MachineContainerState_Exited
 		case value.StartedAt != nil:
-			proto.State = corev1pb.MachineContainerState_MachineContainerState_Running
+			proto.State = corev1pb.ContainerState_MachineContainerState_Running
 		default:
-			proto.State = corev1pb.MachineContainerState_MachineContainerState_Unknown
+			proto.State = corev1pb.ContainerState_MachineContainerState_Unknown
 		}
 
 		return &nodev1pb.InitEventsResponse{

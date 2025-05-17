@@ -42,6 +42,8 @@ func main() {
 	containerService.Start()
 
 	errChan := make(chan error, 1)
+	
+	slog.Info("starting containers", slog.Int("count", len(config.Containers)))
 	for _, containerConfig := range config.Containers {
 		if err = containerService.StartContainer(containerConfig); err != nil {
 			panic(err)

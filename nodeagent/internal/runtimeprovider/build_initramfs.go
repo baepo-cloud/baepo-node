@@ -21,45 +21,43 @@ func (p *Provider) BuildInitRamFS(ctx context.Context, opts types.RuntimeCreateO
 	}
 	defer os.RemoveAll(tmpDir)
 
-	maskSize, _ := opts.NetworkInterface.NetworkCIDR.Mask.Size()
+	maskSize, _ := opts.Machine.NetworkInterface.NetworkCIDR.Mask.Size()
 	initConfig := coretypes.InitConfig{
-		IPAddress:      fmt.Sprintf("%s/%d", opts.NetworkInterface.IPAddress.String(), maskSize),
-		MacAddress:     opts.NetworkInterface.MacAddress.String(),
-		GatewayAddress: opts.NetworkInterface.GatewayAddress.String(),
-		Hostname:       opts.MachineID,
-		Containers:     make([]coretypes.InitContainerConfig, len(opts.Spec.Containers)),
+		IPAddress:      fmt.Sprintf("%s/%d", opts.Machine.NetworkInterface.IPAddress.String(), maskSize),
+		MacAddress:     opts.Machine.NetworkInterface.MacAddress.String(),
+		GatewayAddress: opts.Machine.NetworkInterface.GatewayAddress.String(),
+		Hostname:       opts.Machine.ID,
+		Containers:     make([]coretypes.InitContainerConfig, len(opts.Machine.Containers)),
 	}
-	machineVolumes := map[string]*types.MachineVolume{}
-	for _, machineVolume := range opts.Volumes {
-		machineVolumes[machineVolume.Container] = machineVolume
+	containerVolumes := map[string]*types.MachineVolume{}
+	for _, machineVolume := range opts.Machine.Volumes {
+		containerVolumes[machineVolume.ContainerID] = machineVolume
 	}
 
-	for index, ctr := range opts.Spec.Containers {
-		machineVolume, ok := machineVolumes[ctr.Name]
+	for index, container := range opts.Machine.Containers {
+		machineVolume, ok := containerVolumes[container.ID]
 		if !ok {
 			return fmt.Errorf("failed to find machine volume")
 		}
 
 		imageSpec := machineVolume.Image.Spec
 		cfg := coretypes.InitContainerConfig{
-			Name:       ctr.Name,
-			Env:        imageSpec.Env,
-			Command:    imageSpec.Command,
-			User:       imageSpec.User,
-			WorkingDir: imageSpec.WorkingDir,
-			Volume:     fmt.Sprintf("/dev/vd%v", string(alphabet[index%len(alphabet)])),
+			ContainerID:   container.ID,
+			ContainerName: container.Spec.Name,
+			Env:           imageSpec.Env,
+			Command:       imageSpec.Command,
+			User:          imageSpec.User,
+			WorkingDir:    imageSpec.WorkingDir,
+			Volume:        fmt.Sprintf("/dev/vd%v", string(alphabet[index%len(alphabet)])),
 		}
-		if cfg.Name == "" {
-			cfg.Name = opts.MachineID
-		}
-		for key, value := range ctr.Env {
+		for key, value := range container.Spec.Env {
 			cfg.Env[key] = value
 		}
-		if ctr.WorkingDir != "" {
-			cfg.WorkingDir = ctr.WorkingDir
+		if container.Spec.WorkingDir != "" {
+			cfg.WorkingDir = container.Spec.WorkingDir
 		}
-		if ctr.Command != nil {
-			cfg.Command = ctr.Command
+		if container.Spec.Command != nil {
+			cfg.Command = container.Spec.Command
 		}
 
 		initConfig.Containers[index] = cfg
@@ -90,7 +88,7 @@ func (p *Provider) BuildInitRamFS(ctx context.Context, opts types.RuntimeCreateO
 
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", fmt.Sprintf(
 		"find . -print0 | cpio --null -ov --format=newc | gzip -9 > %v",
-		p.getInitRamFSPath(opts.MachineID),
+		p.getInitRamFSPath(opts.Machine.ID),
 	))
 	cmd.Dir = tmpDir
 	if err = cmd.Run(); err != nil {

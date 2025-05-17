@@ -44,8 +44,8 @@ func (s *Server) GetMachineLogs(ctx context.Context, req *connect.Request[nodev1
 	defer closeClient()
 
 	readStream, err := client.GetLogs(ctx, connect.NewRequest(&nodev1pb.InitGetLogsRequest{
-		ContainerName: req.Msg.ContainerName,
-		Follow:        req.Msg.Follow,
+		Container: req.Msg.ContainerName,
+		Follow:    req.Msg.Follow,
 	}))
 	if err != nil {
 		return err

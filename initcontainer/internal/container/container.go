@@ -22,8 +22,8 @@ type Container struct {
 func New(config types.InitContainerConfig) *Container {
 	return &Container{
 		config:  config,
-		log:     slog.With("container", config.Name),
-		rootDir: "/mnt/" + config.Name,
+		log:     slog.With("container", config.ContainerID),
+		rootDir: "/mnt/" + config.ContainerID,
 	}
 }
 

@@ -11,15 +11,15 @@ import (
 
 func (c *Controller) handleEvent(ctx context.Context, unknownEvent *corev1pb.MachineEvent) {
 	switch event := unknownEvent.Event.(type) {
-	case *corev1pb.MachineEvent_DesiredStateChangedEvent:
+	case *corev1pb.MachineEvent_DesiredStateChanged:
 		c.handleDesiredStateChange(ctx, event)
-	case *corev1pb.MachineEvent_StateChangedEvent:
+	case *corev1pb.MachineEvent_StateChanged:
 		c.handleStateChange(ctx, event)
 	}
 }
 
-func (c *Controller) handleDesiredStateChange(ctx context.Context, event *corev1pb.MachineEvent_DesiredStateChangedEvent) {
-	desiredState := pbadapter.ProtoToMachineDesiredState(event.DesiredStateChangedEvent.DesiredState)
+func (c *Controller) handleDesiredStateChange(ctx context.Context, event *corev1pb.MachineEvent_DesiredStateChanged) {
+	desiredState := pbadapter.ProtoToMachineDesiredState(event.DesiredStateChanged.DesiredState)
 	err := c.updateMachine(func(machine *types.Machine) error {
 		machine.DesiredState = desiredState
 		return c.db.WithContext(ctx).Select("DesiredState").Save(machine).Error
@@ -36,8 +36,8 @@ func (c *Controller) handleDesiredStateChange(ctx context.Context, event *corev1
 	}
 }
 
-func (c *Controller) handleStateChange(ctx context.Context, event *corev1pb.MachineEvent_StateChangedEvent) {
-	state := pbadapter.ProtoToMachineState(event.StateChangedEvent.State)
+func (c *Controller) handleStateChange(ctx context.Context, event *corev1pb.MachineEvent_StateChanged) {
+	state := pbadapter.ProtoToMachineState(event.StateChanged.State)
 	err := c.updateMachine(func(machine *types.Machine) error {
 		machine.State = state
 		return c.db.WithContext(ctx).Select("State").Save(machine).Error
@@ -60,8 +60,8 @@ func (c *Controller) dispatchMachineStateChangeEvent(state types.MachineState) {
 		c.eventBus.PublishEvent(&corev1pb.MachineEvent{
 			Timestamp: timestamppb.Now(),
 			MachineId: machine.ID,
-			Event: &corev1pb.MachineEvent_StateChangedEvent{
-				StateChangedEvent: &corev1pb.MachineEvent_StateChanged{
+			Event: &corev1pb.MachineEvent_StateChanged{
+				StateChanged: &corev1pb.MachineEvent_StateChangedEvent{
 					State: pbadapter.MachineStateToProto(state),
 				},
 			},

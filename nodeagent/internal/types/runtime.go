@@ -7,10 +7,7 @@ import (
 
 type (
 	RuntimeCreateOptions struct {
-		MachineID        string
-		Spec             MachineSpec
-		Volumes          []*MachineVolume
-		NetworkInterface NetworkInterface
+		Machine *Machine
 	}
 
 	RuntimeProvider interface {

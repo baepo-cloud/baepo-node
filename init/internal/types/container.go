@@ -7,7 +7,7 @@ import (
 
 type (
 	ContainerStateChangedEvent struct {
-		ContainerName    string
+		ContainerID      string
 		Healthy          bool
 		HealthcheckError error
 		RestartCount     int32

@@ -17,13 +17,14 @@ func (s InitServiceServer) GetLogs(ctx context.Context, req *connect.Request[nod
 	}
 
 	for entry := range logChan {
-		if ctrName := req.Msg.ContainerName; ctrName != nil && *ctrName != entry.ContainerName {
+		if ctr := req.Msg.Container; ctr != nil && !(*ctr == entry.ContainerID || *ctr == entry.ContainerName) {
 			continue
 		}
 
 		err = stream.Send(&nodev1pb.InitGetLogsResponse{
-			Error:         entry.Error,
+			ContainerId:   entry.ContainerID,
 			ContainerName: entry.ContainerName,
+			Error:         entry.Error,
 			Content:       []byte(entry.Content),
 			Timestamp:     timestamppb.New(entry.Timestamp),
 		})

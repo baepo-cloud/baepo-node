@@ -73,8 +73,8 @@ func (s *Service) connectNodeToController() error {
 			return nil
 		case event := <-s.machineEvents:
 			err = stream.Send(&apiv1pb.NodeControllerClientEvent{
-				Event: &apiv1pb.NodeControllerClientEvent_MachineEvent{
-					MachineEvent: event,
+				Event: &apiv1pb.NodeControllerClientEvent_Machine{
+					Machine: event,
 				},
 			})
 			if err != nil {
@@ -106,8 +106,8 @@ func (s *Service) sendRegisterEvent(stream NodeControllerStream) (string, error)
 	}
 
 	err = stream.Send(&apiv1pb.NodeControllerClientEvent{
-		Event: &apiv1pb.NodeControllerClientEvent_RegisterEvent{
-			RegisterEvent: &apiv1pb.NodeControllerClientEvent_Register{
+		Event: &apiv1pb.NodeControllerClientEvent_Register_{
+			Register: &apiv1pb.NodeControllerClientEvent_Register{
 				ClusterId:       s.config.ClusterID,
 				BootstrapToken:  s.config.BootstrapToken,
 				NodeToken:       nodeToken,
@@ -127,36 +127,36 @@ func (s *Service) sendRegisterEvent(stream NodeControllerStream) (string, error)
 		return "", fmt.Errorf("failed to receive registration response: %w", err)
 	}
 
-	registrationCompleted, ok := event.Event.(*apiv1pb.NodeControllerServerEvent_RegistrationCompletedEvent)
+	registrationCompleted, ok := event.Event.(*apiv1pb.NodeControllerServerEvent_RegistrationCompleted)
 	if !ok {
 		return "", fmt.Errorf("received registration response is not valid: %v", event.Event)
 	}
 
-	s.authorityCert, err = parseCertificate(registrationCompleted.RegistrationCompletedEvent.AuthorityCert)
+	s.authorityCert, err = parseCertificate(registrationCompleted.RegistrationCompleted.AuthorityCert)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse authority certificate: %w", err)
 	}
 
 	tlsCert, err := tls.X509KeyPair(
-		registrationCompleted.RegistrationCompletedEvent.ServerCert,
-		registrationCompleted.RegistrationCompletedEvent.ServerKey,
+		registrationCompleted.RegistrationCompleted.ServerCert,
+		registrationCompleted.RegistrationCompleted.ServerKey,
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to load server tls certificate: %w", err)
 	}
 	s.tlsCert = &tlsCert
 
-	err = os.WriteFile(nodeTokenFilePath, []byte(registrationCompleted.RegistrationCompletedEvent.NodeToken), 0644)
+	err = os.WriteFile(nodeTokenFilePath, []byte(registrationCompleted.RegistrationCompleted.NodeToken), 0644)
 	if err != nil {
 		return "", fmt.Errorf("failed to store node token: %w", err)
 	}
 
-	err = s.processExpectedMachines(registrationCompleted.RegistrationCompletedEvent.ExpectedMachines)
+	err = s.processExpectedMachines(registrationCompleted.RegistrationCompleted.ExpectedMachines)
 	if err != nil {
 		return "", fmt.Errorf("failed to process expected machine list: %w", err)
 	}
 
-	return registrationCompleted.RegistrationCompletedEvent.NodeId, nil
+	return registrationCompleted.RegistrationCompleted.NodeId, nil
 }
 
 func (s *Service) sendStatsEvent(stream NodeControllerStream) error {
@@ -166,8 +166,8 @@ func (s *Service) sendStatsEvent(stream NodeControllerStream) error {
 	}
 
 	return stream.Send(&apiv1pb.NodeControllerClientEvent{
-		Event: &apiv1pb.NodeControllerClientEvent_StatsEvent{
-			StatsEvent: stats,
+		Event: &apiv1pb.NodeControllerClientEvent_Stats_{
+			Stats: stats,
 		},
 	})
 }
@@ -199,7 +199,7 @@ func (s *Service) newStatsEvent() (*apiv1pb.NodeControllerClientEvent_Stats, err
 	}, nil
 }
 
-func (s *Service) processExpectedMachines(machines []*apiv1pb.NodeControllerServerEvent_MachineSpec) error {
+func (s *Service) processExpectedMachines(machines []*apiv1pb.NodeControllerServerEvent_Machine) error {
 	s.log.Info("processing expected machines list")
 	expectedMachines := map[string]bool{}
 	for _, spec := range machines {
@@ -231,7 +231,7 @@ func (s *Service) processExpectedMachines(machines []*apiv1pb.NodeControllerServ
 	return nil
 }
 
-func (s *Service) reconcileWithExpectedMachine(spec *apiv1pb.NodeControllerServerEvent_MachineSpec) error {
+func (s *Service) reconcileWithExpectedMachine(spec *apiv1pb.NodeControllerServerEvent_Machine) error {
 	desiredState := pbadapter.ProtoToMachineDesiredState(spec.DesiredState)
 	log := s.log.With(slog.String("machine-id", spec.MachineId), slog.Any("desired-state", desiredState))
 
@@ -240,11 +240,20 @@ func (s *Service) reconcileWithExpectedMachine(spec *apiv1pb.NodeControllerServe
 	s.machineControllerLock.RUnlock()
 
 	if !ok {
+		containers := make([]types.NodeCreateMachineContainerOptions, len(spec.Containers))
+		for index, container := range spec.Containers {
+			containers[index] = types.NodeCreateMachineContainerOptions{
+				ContainerID: container.ContainerId,
+				Spec:        pbadapter.ProtoToContainerSpec(container.Spec),
+			}
+		}
+
 		log.Info("missing machine, creating")
 		_, err := s.CreateMachine(s.ctx, types.NodeCreateMachineOptions{
 			MachineID:    spec.MachineId,
 			DesiredState: desiredState,
 			Spec:         pbadapter.ProtoToMachineSpec(spec.Spec),
+			Containers:   containers,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create machine: %w", err)
@@ -271,20 +280,28 @@ func (s *Service) reconcileWithExpectedMachine(spec *apiv1pb.NodeControllerServe
 
 func (s *Service) processServerEvent(unknownEvent *apiv1pb.NodeControllerServerEvent) error {
 	switch event := unknownEvent.Event.(type) {
-	case *apiv1pb.NodeControllerServerEvent_CreateMachineEvent:
-		_, err := s.CreateMachine(s.ctx, types.NodeCreateMachineOptions{
-			MachineID:    event.CreateMachineEvent.MachineId,
-			DesiredState: pbadapter.ProtoToMachineDesiredState(event.CreateMachineEvent.DesiredState),
-			Spec:         pbadapter.ProtoToMachineSpec(event.CreateMachineEvent.Spec),
-		})
+	case *apiv1pb.NodeControllerServerEvent_CreateMachine:
+		opts := types.NodeCreateMachineOptions{
+			MachineID:    event.CreateMachine.MachineId,
+			DesiredState: pbadapter.ProtoToMachineDesiredState(event.CreateMachine.DesiredState),
+			Spec:         pbadapter.ProtoToMachineSpec(event.CreateMachine.Spec),
+			Containers:   make([]types.NodeCreateMachineContainerOptions, len(event.CreateMachine.Containers)),
+		}
+		for index, container := range event.CreateMachine.Containers {
+			opts.Containers[index] = types.NodeCreateMachineContainerOptions{
+				ContainerID: container.ContainerId,
+				Spec:        pbadapter.ProtoToContainerSpec(container.Spec),
+			}
+		}
+		_, err := s.CreateMachine(s.ctx, opts)
 		return err
-	case *apiv1pb.NodeControllerServerEvent_UpdateMachineDesiredStateEvent:
+	case *apiv1pb.NodeControllerServerEvent_UpdateMachineDesiredState:
 		_, err := s.UpdateMachineDesiredState(s.ctx, types.NodeUpdateMachineDesiredStateOptions{
-			MachineID:    event.UpdateMachineDesiredStateEvent.MachineId,
-			DesiredState: pbadapter.ProtoToMachineDesiredState(event.UpdateMachineDesiredStateEvent.DesiredState),
+			MachineID:    event.UpdateMachineDesiredState.MachineId,
+			DesiredState: pbadapter.ProtoToMachineDesiredState(event.UpdateMachineDesiredState.DesiredState),
 		})
 		return err
-	case *apiv1pb.NodeControllerServerEvent_PingEvent:
+	case *apiv1pb.NodeControllerServerEvent_Ping:
 		return nil
 	default:
 		return errors.New("unknown event")

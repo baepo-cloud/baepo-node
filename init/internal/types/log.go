@@ -9,8 +9,9 @@ import (
 
 type (
 	LogEntry struct {
-		Timestamp     time.Time
+		ContainerID   string
 		ContainerName string
+		Timestamp     time.Time
 		Error         bool
 		Content       string
 	}

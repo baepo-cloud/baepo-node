@@ -23,11 +23,16 @@ var (
 )
 
 func (c *Container) setupNetworking() error {
-	if err := syscall.Sethostname([]byte(c.config.Name)); err != nil {
+	hostname := c.config.ContainerName
+	if hostname == "" {
+		hostname = c.config.ContainerID
+	}
+
+	if err := syscall.Sethostname([]byte(hostname)); err != nil {
 		return fmt.Errorf("failed to set hostname: %w", err)
 	}
 
-	if err := os.WriteFile("/etc/hostname", []byte(c.config.Name+"\n"), 0x0755); err != nil {
+	if err := os.WriteFile("/etc/hostname", []byte(hostname+"\n"), 0x0755); err != nil {
 		return fmt.Errorf("failed to write /etc/hostname: %w", err)
 	}
 

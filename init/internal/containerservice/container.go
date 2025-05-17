@@ -9,6 +9,7 @@ import (
 	"github.com/baepo-cloud/baepo-node/core/typeutil"
 	"github.com/baepo-cloud/baepo-node/init/internal/types"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/exec"
@@ -17,6 +18,7 @@ import (
 )
 
 type Container struct {
+	log              *slog.Logger
 	config           coretypes.InitContainerConfig
 	eventBus         *eventbus.Bus[any]
 	stdout           io.Writer
@@ -31,6 +33,9 @@ type Container struct {
 }
 
 func (s *Service) StartContainer(config coretypes.InitContainerConfig) error {
+	log := slog.With(slog.String("component", "container"), slog.String("container-id", config.ContainerID))
+	log.Info("starting container")
+
 	jsonConfig, err := json.Marshal(config)
 	if err != nil {
 		return err
@@ -38,6 +43,7 @@ func (s *Service) StartContainer(config coretypes.InitContainerConfig) error {
 
 	stdout, stderr := s.logService.NewContainerLogWriter(config)
 	ctr := &Container{
+		log:      log,
 		config:   config,
 		eventBus: s.eventBus,
 		stdout:   stdout,
@@ -46,7 +52,7 @@ func (s *Service) StartContainer(config coretypes.InitContainerConfig) error {
 	go ctr.run(jsonConfig)
 
 	s.containersMutex.Lock()
-	s.containers[config.Name] = ctr
+	s.containers[config.ContainerID] = ctr
 	s.containersMutex.Unlock()
 
 	return nil
@@ -63,11 +69,15 @@ func (c *Container) run(jsonConfig []byte) {
 		c.cmd.Stderr = c.stderr
 		c.cmd.Stdin = os.Stdin
 		if err := c.cmd.Start(); err != nil {
+			c.log.Warn("failed to start container", slog.Any("error", err))
 			c.exitError.Store(&err)
 		} else {
 			healthcheckCtx, cancel := context.WithCancel(context.Background())
 			go c.healthcheckWorker(healthcheckCtx)
 			err = c.cmd.Wait()
+			c.log.Warn("container exited",
+				slog.Any("error", err),
+				slog.Int("exit-code", c.cmd.ProcessState.ExitCode()))
 			c.exitError.Store(&err)
 			c.exitedAt.Store(typeutil.Ptr(time.Now()))
 			cancel()
@@ -146,12 +156,12 @@ func (c *Container) performHealthcheck(ctx context.Context) error {
 
 func (c *Container) newContainerStateChangedEvent() *types.ContainerStateChangedEvent {
 	event := &types.ContainerStateChangedEvent{
-		ContainerName: c.config.Name,
-		Healthy:       c.healthy.Load(),
-		RestartCount:  c.restartCount.Load(),
-		StartedAt:     c.startedAt.Load(),
-		ExitedAt:      c.exitedAt.Load(),
-		Timestamp:     time.Now(),
+		ContainerID:  c.config.ContainerID,
+		Healthy:      c.healthy.Load(),
+		RestartCount: c.restartCount.Load(),
+		StartedAt:    c.startedAt.Load(),
+		ExitedAt:     c.exitedAt.Load(),
+		Timestamp:    time.Now(),
 	}
 	if err := c.healthcheckError.Load(); err != nil {
 		event.HealthcheckError = *err

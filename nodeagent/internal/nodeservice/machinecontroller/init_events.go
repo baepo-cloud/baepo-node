@@ -15,7 +15,6 @@ var StatesToListenInit = []types.MachineState{
 	types.MachineStateStarting,
 	types.MachineStateRunning,
 	types.MachineStateDegraded,
-	types.MachineStateError,
 }
 
 func (c *Controller) syncInitEventsListener() {

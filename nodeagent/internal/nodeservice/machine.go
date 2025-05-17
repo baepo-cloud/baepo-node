@@ -16,7 +16,8 @@ func (s *Service) loadMachines(ctx context.Context) error {
 	err := s.db.WithContext(ctx).
 		Preload("Volumes.Volume").
 		Preload("Volumes.Image.Volume").
-		Joins("NetworkInterface").
+		Preload("Containers").
+		Preload("NetworkInterface").
 		Where("machines.state NOT IN ?", []types.MachineState{types.MachineStateTerminated}).
 		Find(&machines).
 		Error
@@ -72,12 +73,19 @@ func (s *Service) ListMachines(ctx context.Context) ([]*types.Machine, error) {
 
 func (s *Service) CreateMachine(ctx context.Context, opts types.NodeCreateMachineOptions) (*types.Machine, error) {
 	s.log.Info("requesting machine creation", slog.String("machine-id", opts.MachineID))
-
 	machine := &types.Machine{
 		ID:           opts.MachineID,
 		State:        types.MachineStatePending,
 		DesiredState: opts.DesiredState,
 		Spec:         &opts.Spec,
+		Containers:   make([]*types.Container, len(opts.Containers)),
+	}
+	for index, container := range opts.Containers {
+		machine.Containers[index] = &types.Container{
+			ID:        container.ContainerID,
+			MachineID: machine.ID,
+			Spec:      &container.Spec,
+		}
 	}
 	if err := s.db.WithContext(ctx).Save(&machine).Error; err != nil {
 		return nil, fmt.Errorf("failed to create machine: %w", err)
@@ -86,7 +94,6 @@ func (s *Service) CreateMachine(ctx context.Context, opts types.NodeCreateMachin
 	s.machineControllerLock.Lock()
 	defer s.machineControllerLock.Unlock()
 	s.machineControllers[machine.ID] = s.newMachineController(machine)
-
 	return machine, nil
 }
 

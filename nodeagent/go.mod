@@ -9,7 +9,7 @@ tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
 require (
 	connectrpc.com/connect v1.18.1
 	github.com/baepo-cloud/baepo-node/core v0.0.0-00010101000000-000000000000
-	github.com/baepo-cloud/baepo-proto/go v0.0.0-20250508080114-4126d1786353
+	github.com/baepo-cloud/baepo-proto/go v0.0.0-20250517105736-a90dd89a72ed
 	github.com/expected-so/canonicallog v0.0.0-20250112093902-7d3bba85c4b9
 	github.com/google/go-containerregistry v0.20.3
 	github.com/joho/godotenv v1.5.1
@@ -73,6 +73,8 @@ require (
 	golang.org/x/sync v0.13.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
 	golang.org/x/tools v0.31.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250218202821-56aae31c358a // indirect
+	google.golang.org/grpc v1.72.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

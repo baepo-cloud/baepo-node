@@ -11,6 +11,12 @@ type (
 		MachineID    string
 		DesiredState MachineDesiredState
 		Spec         MachineSpec
+		Containers   []NodeCreateMachineContainerOptions
+	}
+
+	NodeCreateMachineContainerOptions struct {
+		ContainerID string
+		Spec        ContainerSpec
 	}
 
 	NodeUpdateMachineDesiredStateOptions struct {

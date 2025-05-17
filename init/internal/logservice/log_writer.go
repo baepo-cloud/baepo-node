@@ -11,6 +11,7 @@ import (
 
 type logWriter struct {
 	service       *Service
+	containerID   string
 	containerName string
 	error         bool
 	buf           bytes.Buffer
@@ -22,12 +23,14 @@ var _ io.Writer = (*logWriter)(nil)
 func (s *Service) NewContainerLogWriter(config coretypes.InitContainerConfig) (io.Writer, io.Writer) {
 	stdout := &logWriter{
 		service:       s,
-		containerName: config.Name,
+		containerID:   config.ContainerID,
+		containerName: config.ContainerName,
 		error:         false,
 	}
 	stderr := &logWriter{
 		service:       s,
-		containerName: config.Name,
+		containerID:   config.ContainerID,
+		containerName: config.ContainerName,
 		error:         true,
 	}
 	return stdout, stderr
@@ -49,8 +52,9 @@ func (w *logWriter) Write(p []byte) (int, error) {
 		}
 
 		entry := &types.LogEntry{
-			Timestamp:     time.Now(),
+			ContainerID:   w.containerID,
 			ContainerName: w.containerName,
+			Timestamp:     time.Now(),
 			Error:         w.error,
 			Content:       line,
 		}

@@ -10,14 +10,15 @@ type (
 	}
 
 	InitContainerConfig struct {
-		Name        string
-		Env         map[string]string
-		Command     []string
-		User        string
-		WorkingDir  string
-		Volume      string
-		Healthcheck *InitContainerHealthcheckConfig
-		Restart     *InitContainerRestartConfig
+		ContainerID   string
+		ContainerName string
+		Env           map[string]string
+		Command       []string
+		User          string
+		WorkingDir    string
+		Volume        string
+		Healthcheck   *InitContainerHealthcheckConfig
+		Restart       *InitContainerRestartConfig
 	}
 
 	InitContainerHealthcheckConfig struct {

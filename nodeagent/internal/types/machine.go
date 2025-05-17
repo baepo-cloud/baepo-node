@@ -19,43 +19,30 @@ type (
 		RuntimePID         *int `gorm:"column:runtime_pid"`
 		Spec               *MachineSpec
 		NetworkInterfaceID *string
-		NetworkInterface   *NetworkInterface
 		Volumes            []*MachineVolume
+		Containers         []*Container
+		NetworkInterface   *NetworkInterface
 		CreatedAt          time.Time
 		TerminatedAt       *time.Time
 	}
 
-	MachineVolume struct {
-		ID        string
-		Position  int
-		Container string
-		MachineID string
-		Machine   *Machine
-		ImageID   *string
-		Image     *Image
-		VolumeID  string
-		Volume    *Volume
-		CreatedAt time.Time
-	}
-
 	MachineSpec struct {
-		Cpus       uint32
-		MemoryMB   uint64
-		Containers []MachineContainerSpec
+		Cpus     uint32
+		MemoryMB uint64
 	}
 
-	MachineContainerSpec struct {
-		Name        string
-		Image       string
-		Env         map[string]string
-		Command     []string
-		Healthcheck *MachineContainerHealthcheckSpec
-		WorkingDir  string
-	}
-
-	MachineContainerHealthcheckSpec struct {
-		InitialDelaySeconds int32
-		PeriodSeconds       int32
+	MachineVolume struct {
+		ID          string
+		Position    int
+		MachineID   string
+		Machine     *Machine
+		ContainerID string
+		Container   *Container
+		ImageID     *string
+		Image       *Image
+		VolumeID    string
+		Volume      *Volume
+		CreatedAt   time.Time
 	}
 )
 

@@ -102,10 +102,7 @@ func (c *Controller) reconcileToRunningState(ctx context.Context) error {
 
 	machine = c.GetMachine()
 	pid, err := c.runtimeProvider.Create(ctx, types.RuntimeCreateOptions{
-		MachineID:        machine.ID,
-		Spec:             *machine.Spec,
-		Volumes:          machine.Volumes,
-		NetworkInterface: *machine.NetworkInterface,
+		Machine: machine,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create machine: %w", err)
