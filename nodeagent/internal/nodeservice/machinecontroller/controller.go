@@ -26,7 +26,7 @@ type Controller struct {
 	currentStateReconciliation *types.MachineDesiredState
 	reconciliationMutex        sync.Mutex
 	cancelReconciliation       func()
-	eventBus                   *eventbus.Bus[*corev1pb.MachineEvent]
+	eventBus                   *eventbus.Bus[any]
 	eventCancelDispatcher      context.CancelFunc
 }
 
@@ -48,7 +48,7 @@ func New(
 		runtimeProvider: runtimeProvider,
 		imageProvider:   imageProvider,
 		machine:         machine,
-		eventBus:        eventbus.NewBus[*corev1pb.MachineEvent](),
+		eventBus:        eventbus.NewBus[any](),
 	}
 
 	eventDispatcherCtx, eventCancelDispatcher := context.WithCancel(context.Background())
@@ -90,7 +90,7 @@ func (c *Controller) Stop() {
 	}
 }
 
-func (c *Controller) SubscribeToEvents(handler func(ctx context.Context, event *corev1pb.MachineEvent)) func() {
+func (c *Controller) SubscribeToEvents(handler func(ctx context.Context, event any)) func() {
 	return c.eventBus.SubscribeToEvents(handler)
 }
 

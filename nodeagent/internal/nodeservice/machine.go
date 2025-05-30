@@ -40,9 +40,11 @@ func (s *Service) newMachineController(machine *types.Machine) *machinecontrolle
 		s.db, s.volumeProvider, s.networkProvider, s.runtimeProvider, s.imageProvider,
 		machine,
 	)
-	ctrl.SubscribeToEvents(func(ctx context.Context, event *corev1pb.MachineEvent) {
+	ctrl.SubscribeToEvents(func(ctx context.Context, payload any) {
 		go func() {
-			s.machineEvents <- event
+			if machineEvent, ok := payload.(*corev1pb.MachineEvent); ok {
+				s.machineEvents <- machineEvent
+			}
 		}()
 	})
 	return ctrl

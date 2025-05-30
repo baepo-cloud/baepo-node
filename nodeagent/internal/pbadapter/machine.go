@@ -1,6 +1,7 @@
 package pbadapter
 
 import (
+	coretypes "github.com/baepo-cloud/baepo-node/core/types"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	corev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/core/v1"
 )
@@ -95,13 +96,13 @@ func ProtoToContainerSpec(specPb *corev1pb.ContainerSpec) types.ContainerSpec {
 		spec.WorkingDir = *specPb.WorkingDir
 	}
 	if specPb.Healthcheck != nil {
-		spec.Healthcheck = &types.ContainerHealthcheckSpec{
+		spec.Healthcheck = &coretypes.ContainerHealthcheckSpec{
 			InitialDelaySeconds: specPb.Healthcheck.InitialDelaySeconds,
 			PeriodSeconds:       specPb.Healthcheck.PeriodSeconds,
 		}
 		switch healthcheckType := specPb.Healthcheck.Type.(type) {
 		case *corev1pb.ContainerHealthcheckSpec_Http:
-			spec.Healthcheck.Http = &types.ContainerHttpHealthcheckSpec{
+			spec.Healthcheck.Http = &coretypes.ContainerHttpHealthcheckSpec{
 				Method:  healthcheckType.Http.Method,
 				Path:    healthcheckType.Http.Path,
 				Port:    healthcheckType.Http.Port,

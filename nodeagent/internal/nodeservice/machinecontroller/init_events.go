@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/core/typeutil"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
+	corev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/core/v1"
+	nodev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/node/v1"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"log/slog"
 	"time"
@@ -76,16 +78,32 @@ func (c *Controller) handleInitEventStream(ctx context.Context, machineID string
 	hasReceived := false
 	for stream.Receive() {
 		if !hasReceived {
-			if *consecutiveErrorCount > 0 {
-				c.dispatchMachineStateChangeEvent(types.MachineStateRunning)
-				*consecutiveErrorCount = 0
-			}
+			c.dispatchMachineStateChangeEvent(types.MachineStateRunning)
+			*consecutiveErrorCount = 0
 			hasReceived = true
 		}
 
 		msg := stream.Msg()
 		c.log.Debug("received event from init", slog.Any("event", msg))
-		//c.eventBus.PublishEvent(stream.Msg())
+		if event, ok := msg.Event.(*nodev1pb.InitEventsResponse_ContainerStateChanged); ok {
+			c.eventBus.PublishEvent(&corev1pb.ContainerEvent{
+				EventId:     msg.EventId,
+				ContainerId: event.ContainerStateChanged.ContainerId,
+				Event: &corev1pb.ContainerEvent_StateChanged{
+					StateChanged: &corev1pb.ContainerEvent_StateChangedEvent{
+						State:            event.ContainerStateChanged.State,
+						StartedAt:        event.ContainerStateChanged.StartedAt,
+						ExitedAt:         event.ContainerStateChanged.ExitedAt,
+						ExitCode:         event.ContainerStateChanged.ExitCode,
+						ExitError:        event.ContainerStateChanged.ExitError,
+						Healthy:          event.ContainerStateChanged.Healthy,
+						HealthcheckError: event.ContainerStateChanged.HealthcheckError,
+						RestartCount:     event.ContainerStateChanged.RestartCount,
+					},
+				},
+				Timestamp: msg.Timestamp,
+			})
+		}
 	}
 
 	err = stream.Err()

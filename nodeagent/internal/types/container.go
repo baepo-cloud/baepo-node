@@ -3,6 +3,7 @@ package types
 import (
 	"database/sql/driver"
 	"encoding/json"
+	coretypes "github.com/baepo-cloud/baepo-node/core/types"
 	"time"
 )
 
@@ -15,27 +16,7 @@ type (
 		CreatedAt time.Time
 	}
 
-	ContainerSpec struct {
-		Name        string
-		Image       string
-		Env         map[string]string
-		Command     []string
-		Healthcheck *ContainerHealthcheckSpec
-		WorkingDir  string
-	}
-
-	ContainerHealthcheckSpec struct {
-		InitialDelaySeconds int32
-		PeriodSeconds       int32
-		Http                *ContainerHttpHealthcheckSpec
-	}
-
-	ContainerHttpHealthcheckSpec struct {
-		Method  string
-		Path    string
-		Port    int32
-		Headers map[string]string
-	}
+	ContainerSpec coretypes.ContainerSpec
 )
 
 func (*ContainerSpec) GormDataType() string {

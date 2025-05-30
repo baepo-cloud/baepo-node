@@ -2,19 +2,26 @@ package machinecontroller
 
 import (
 	"context"
+	"fmt"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/pbadapter"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	corev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/core/v1"
+	"github.com/nrednav/cuid2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"log/slog"
 )
 
-func (c *Controller) handleEvent(ctx context.Context, unknownEvent *corev1pb.MachineEvent) {
-	switch event := unknownEvent.Event.(type) {
-	case *corev1pb.MachineEvent_DesiredStateChanged:
-		c.handleDesiredStateChange(ctx, event)
-	case *corev1pb.MachineEvent_StateChanged:
-		c.handleStateChange(ctx, event)
+func (c *Controller) handleEvent(ctx context.Context, payload any) {
+	switch typedPayload := payload.(type) {
+	case *corev1pb.MachineEvent:
+		switch typedEvent := typedPayload.Event.(type) {
+		case *corev1pb.MachineEvent_DesiredStateChanged:
+			c.handleDesiredStateChange(ctx, typedEvent)
+		case *corev1pb.MachineEvent_StateChanged:
+			c.handleStateChange(ctx, typedEvent)
+		}
+	case *corev1pb.ContainerEvent:
+		fmt.Println(typedPayload)
 	}
 }
 
@@ -58,13 +65,14 @@ func (c *Controller) dispatchMachineStateChangeEvent(state types.MachineState) {
 	machine := c.GetMachine()
 	if machine.State != state {
 		c.eventBus.PublishEvent(&corev1pb.MachineEvent{
-			Timestamp: timestamppb.Now(),
+			EventId:   cuid2.Generate(),
 			MachineId: machine.ID,
 			Event: &corev1pb.MachineEvent_StateChanged{
 				StateChanged: &corev1pb.MachineEvent_StateChangedEvent{
 					State: pbadapter.MachineStateToProto(state),
 				},
 			},
+			Timestamp: timestamppb.Now(),
 		})
 	}
 }
