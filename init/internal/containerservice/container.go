@@ -8,6 +8,7 @@ import (
 	coretypes "github.com/baepo-cloud/baepo-node/core/types"
 	"github.com/baepo-cloud/baepo-node/core/typeutil"
 	"github.com/baepo-cloud/baepo-node/init/internal/types"
+	"github.com/nrednav/cuid2"
 	"io"
 	"log/slog"
 	"net/http"
@@ -156,6 +157,7 @@ func (c *Container) performHealthcheck(ctx context.Context) error {
 
 func (c *Container) newContainerStateChangedEvent() *types.ContainerStateChangedEvent {
 	event := &types.ContainerStateChangedEvent{
+		EventID:      cuid2.Generate(),
 		ContainerID:  c.config.ContainerID,
 		Healthy:      c.healthy.Load(),
 		RestartCount: c.restartCount.Load(),

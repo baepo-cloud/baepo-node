@@ -1,25 +1,21 @@
-package nodeservice
+package machineservice
 
 import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/pem"
 	"fmt"
-	"github.com/baepo-cloud/baepo-node/nodeagent/internal/nodeservice/machinecontroller"
+	"github.com/baepo-cloud/baepo-node/nodeagent/internal/machineservice/machinecontroller"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
-	"github.com/baepo-cloud/baepo-proto/go/baepo/api/v1/apiv1pbconnect"
 	corev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/core/v1"
 	"gorm.io/gorm"
 	"log/slog"
-	"net"
 	"sync"
 )
 
 type Service struct {
 	log                   *slog.Logger
 	db                    *gorm.DB
-	apiClient             apiv1pbconnect.NodeControllerServiceClient
 	volumeProvider        types.VolumeProvider
 	networkProvider       types.NetworkProvider
 	runtimeProvider       types.RuntimeProvider
@@ -27,18 +23,17 @@ type Service struct {
 	config                *types.Config
 	authorityCert         *x509.Certificate
 	tlsCert               *tls.Certificate
-	ctx                   context.Context
-	cancelCtx             context.CancelFunc
+	gcWorkerCtx           context.Context
+	cancelGCWorker        context.CancelFunc
 	machineControllerLock sync.RWMutex
 	machineControllers    map[string]*machinecontroller.Controller
 	machineEvents         chan *corev1pb.MachineEvent
 }
 
-var _ types.NodeService = (*Service)(nil)
+var _ types.MachineService = (*Service)(nil)
 
 func New(
 	db *gorm.DB,
-	apiClient apiv1pbconnect.NodeControllerServiceClient,
 	volumeProvider types.VolumeProvider,
 	networkProvider types.NetworkProvider,
 	runtimeProvider types.RuntimeProvider,
@@ -46,9 +41,8 @@ func New(
 	config *types.Config,
 ) *Service {
 	return &Service{
-		log:                   slog.With(slog.String("component", "nodeservice")),
+		log:                   slog.With(slog.String("component", "machineservice")),
 		db:                    db,
-		apiClient:             apiClient,
 		volumeProvider:        volumeProvider,
 		networkProvider:       networkProvider,
 		runtimeProvider:       runtimeProvider,
@@ -65,43 +59,53 @@ func (s *Service) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to load machines: %w", err)
 	}
 
-	s.ctx, s.cancelCtx = context.WithCancel(context.Background())
+	s.gcWorkerCtx, s.cancelGCWorker = context.WithCancel(context.Background())
 	go s.startGCWorker()
-	go s.startRegistrationWorker()
 	return nil
 }
 
 func (s *Service) Stop(ctx context.Context) error {
-	s.cancelCtx()
+	if s.cancelGCWorker != nil {
+		s.cancelGCWorker()
+	}
 	return nil
 }
 
-func (s *Service) AuthorityCertificate() *x509.Certificate {
-	return s.authorityCert
-}
+func (s *Service) loadMachines(ctx context.Context) error {
+	s.log.Info("loading machines")
 
-func (s *Service) TLSCertificate() *tls.Certificate {
-	return s.tlsCert
-}
-
-func (s *Service) getEndpoint(addr string) string {
-	host, port, _ := net.SplitHostPort(addr)
-	if host == "" {
-		host = s.config.IPAddr
-	}
-	return net.JoinHostPort(host, port)
-}
-
-func parseCertificate(value []byte) (*x509.Certificate, error) {
-	block, _ := pem.Decode(value)
-	if block == nil || block.Type != "CA CERTIFICATE" {
-		return nil, fmt.Errorf("failed to decode PEM block containing certificate")
-	}
-
-	cert, err := x509.ParseCertificate(block.Bytes)
+	var machines []*types.Machine
+	err := s.db.WithContext(ctx).
+		Preload("Volumes.Volume").
+		Preload("Volumes.Image.Volume").
+		Preload("Containers").
+		Preload("NetworkInterface").
+		Where("machines.state NOT IN ?", []types.MachineState{types.MachineStateTerminated}).
+		Find(&machines).
+		Error
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse CA certificate: %w", err)
+		return fmt.Errorf("failed to retrieve machines: %w", err)
 	}
 
-	return cert, nil
+	s.machineControllerLock.Lock()
+	defer s.machineControllerLock.Unlock()
+	for _, machine := range machines {
+		s.machineControllers[machine.ID] = s.newMachineController(machine)
+	}
+	return nil
+}
+
+func (s *Service) newMachineController(machine *types.Machine) *machinecontroller.Controller {
+	ctrl := machinecontroller.New(
+		s.db, s.volumeProvider, s.networkProvider, s.runtimeProvider, s.imageProvider,
+		machine,
+	)
+	ctrl.SubscribeToEvents(func(ctx context.Context, payload any) {
+		go func() {
+			if machineEvent, ok := payload.(*corev1pb.MachineEvent); ok {
+				s.machineEvents <- machineEvent
+			}
+		}()
+	})
+	return ctrl
 }

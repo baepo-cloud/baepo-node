@@ -16,7 +16,7 @@ func (s *Server) Handler() http.Handler {
 			return
 		}
 
-		machine, err := s.service.FindMachine(r.Context(), machineID)
+		machine, err := s.machineService.FindByID(r.Context(), machineID)
 		if errors.Is(err, types.ErrMachineNotFound) {
 			w.WriteHeader(http.StatusNotFound)
 			return

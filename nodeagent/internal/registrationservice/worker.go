@@ -1,7 +1,7 @@
-package nodeservice
+package registrationservice
 
 import (
-	"connectrpc.com/connect"
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -18,12 +18,10 @@ import (
 	"time"
 )
 
-type NodeControllerStream = *connect.BidiStreamForClient[apiv1pb.NodeControllerClientEvent, apiv1pb.NodeControllerServerEvent]
-
 func (s *Service) startRegistrationWorker() {
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-s.workerCtx.Done():
 			return
 		default:
 			err := s.connectNodeToController()
@@ -32,7 +30,7 @@ func (s *Service) startRegistrationWorker() {
 				select {
 				case <-time.After(5 * time.Second):
 					continue
-				case <-s.ctx.Done():
+				case <-s.workerCtx.Done():
 					return
 				}
 			}
@@ -42,7 +40,7 @@ func (s *Service) startRegistrationWorker() {
 
 func (s *Service) connectNodeToController() error {
 	s.log.Info("starting node registration")
-	stream := s.apiClient.Events(s.ctx)
+	stream := s.apiClient.Events(s.workerCtx)
 
 	nodeID, err := s.sendRegisterEvent(stream)
 	if err != nil {
@@ -69,17 +67,17 @@ func (s *Service) connectNodeToController() error {
 
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-s.workerCtx.Done():
 			return nil
-		case event := <-s.machineEvents:
-			err = stream.Send(&apiv1pb.NodeControllerClientEvent{
-				Event: &apiv1pb.NodeControllerClientEvent_Machine{
-					Machine: event,
-				},
-			})
-			if err != nil {
-				return err
-			}
+		//case event := <-s.machineEvents:
+		//	err = stream.Send(&apiv1pb.NodeControllerClientEvent{
+		//		Event: &apiv1pb.NodeControllerClientEvent_Machine{
+		//			Machine: event,
+		//		},
+		//	})
+		//	if err != nil {
+		//		return err
+		//	}
 		case event := <-serverEvents:
 			if err = s.processServerEvent(event); err != nil {
 				return err
@@ -183,12 +181,14 @@ func (s *Service) newStatsEvent() (*apiv1pb.NodeControllerClientEvent_Stats, err
 		return nil, err
 	}
 
-	s.machineControllerLock.RLock()
-	defer s.machineControllerLock.RUnlock()
+	machines, err := s.machineService.List(s.workerCtx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list machines: %w", err)
+	}
 
 	reservedMemoryMB := uint64(0)
-	for _, ctrl := range s.machineControllers {
-		reservedMemoryMB += ctrl.GetMachine().Spec.MemoryMB
+	for _, machine := range machines {
+		reservedMemoryMB += machine.Spec.MemoryMB
 	}
 
 	return &apiv1pb.NodeControllerClientEvent_Stats{
@@ -209,62 +209,43 @@ func (s *Service) processExpectedMachines(machines []*apiv1pb.NodeControllerServ
 		}
 	}
 
-	var machinesToTerminate []string
-	s.machineControllerLock.RLock()
-	for machineID := range s.machineControllers {
-		if _, ok := expectedMachines[machineID]; !ok {
-			machinesToTerminate = append(machinesToTerminate, machineID)
-		}
+	currentMachines, err := s.machineService.List(s.workerCtx)
+	if err != nil {
+		return fmt.Errorf("failed to list machines: %w", err)
 	}
-	s.machineControllerLock.RUnlock()
 
-	for _, machineID := range machinesToTerminate {
-		_, err := s.UpdateMachineDesiredState(s.ctx, types.NodeUpdateMachineDesiredStateOptions{
-			MachineID:    machineID,
+	for _, machine := range currentMachines {
+		if _, ok := expectedMachines[machine.ID]; ok {
+			continue
+		}
+
+		_, err = s.machineService.UpdateDesiredState(s.workerCtx, types.MachineUpdateDesiredStateOptions{
+			MachineID:    machine.ID,
 			DesiredState: types.MachineDesiredStateTerminated,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to terminate machine: %w", err)
 		}
 	}
-
 	return nil
 }
 
 func (s *Service) reconcileWithExpectedMachine(spec *apiv1pb.NodeControllerServerEvent_Machine) error {
 	desiredState := pbadapter.ProtoToMachineDesiredState(spec.DesiredState)
 	log := s.log.With(slog.String("machine-id", spec.MachineId), slog.Any("desired-state", desiredState))
-
-	s.machineControllerLock.RLock()
-	ctrl, ok := s.machineControllers[spec.MachineId]
-	s.machineControllerLock.RUnlock()
-
-	if !ok {
-		containers := make([]types.NodeCreateMachineContainerOptions, len(spec.Containers))
-		for index, container := range spec.Containers {
-			containers[index] = types.NodeCreateMachineContainerOptions{
-				ContainerID: container.ContainerId,
-				Spec:        pbadapter.ProtoToContainerSpec(container.Spec),
-			}
-		}
-
+	machine, err := s.machineService.FindByID(s.workerCtx, spec.MachineId)
+	if errors.Is(err, types.ErrMachineNotFound) {
 		log.Info("missing machine, creating")
-		_, err := s.CreateMachine(s.ctx, types.NodeCreateMachineOptions{
-			MachineID:    spec.MachineId,
-			DesiredState: desiredState,
-			Spec:         pbadapter.ProtoToMachineSpec(spec.Spec),
-			Containers:   containers,
-		})
-		if err != nil {
+		if err = s.createMachine(s.workerCtx, spec); err != nil {
 			return fmt.Errorf("failed to create machine: %w", err)
 		}
 
 		return nil
-	}
-
-	if current := ctrl.GetMachine().DesiredState; current != desiredState {
+	} else if err != nil {
+		return fmt.Errorf("failed to find machine: %w", err)
+	} else if current := machine.DesiredState; current != desiredState {
 		log.Info("desired state mismatch, updating", slog.Any("current-desired-state", current))
-		_, err := s.UpdateMachineDesiredState(s.ctx, types.NodeUpdateMachineDesiredStateOptions{
+		_, err = s.machineService.UpdateDesiredState(s.workerCtx, types.MachineUpdateDesiredStateOptions{
 			MachineID:    spec.MachineId,
 			DesiredState: desiredState,
 		})
@@ -281,22 +262,9 @@ func (s *Service) reconcileWithExpectedMachine(spec *apiv1pb.NodeControllerServe
 func (s *Service) processServerEvent(unknownEvent *apiv1pb.NodeControllerServerEvent) error {
 	switch event := unknownEvent.Event.(type) {
 	case *apiv1pb.NodeControllerServerEvent_CreateMachine:
-		opts := types.NodeCreateMachineOptions{
-			MachineID:    event.CreateMachine.MachineId,
-			DesiredState: pbadapter.ProtoToMachineDesiredState(event.CreateMachine.DesiredState),
-			Spec:         pbadapter.ProtoToMachineSpec(event.CreateMachine.Spec),
-			Containers:   make([]types.NodeCreateMachineContainerOptions, len(event.CreateMachine.Containers)),
-		}
-		for index, container := range event.CreateMachine.Containers {
-			opts.Containers[index] = types.NodeCreateMachineContainerOptions{
-				ContainerID: container.ContainerId,
-				Spec:        pbadapter.ProtoToContainerSpec(container.Spec),
-			}
-		}
-		_, err := s.CreateMachine(s.ctx, opts)
-		return err
+		return s.createMachine(s.workerCtx, event.CreateMachine)
 	case *apiv1pb.NodeControllerServerEvent_UpdateMachineDesiredState:
-		_, err := s.UpdateMachineDesiredState(s.ctx, types.NodeUpdateMachineDesiredStateOptions{
+		_, err := s.machineService.UpdateDesiredState(s.workerCtx, types.MachineUpdateDesiredStateOptions{
 			MachineID:    event.UpdateMachineDesiredState.MachineId,
 			DesiredState: pbadapter.ProtoToMachineDesiredState(event.UpdateMachineDesiredState.DesiredState),
 		})
@@ -306,4 +274,22 @@ func (s *Service) processServerEvent(unknownEvent *apiv1pb.NodeControllerServerE
 	default:
 		return errors.New("unknown event")
 	}
+}
+
+func (s *Service) createMachine(ctx context.Context, pbMachine *apiv1pb.NodeControllerServerEvent_Machine) error {
+	opts := types.MachineCreateOptions{
+		MachineID:    pbMachine.MachineId,
+		DesiredState: pbadapter.ProtoToMachineDesiredState(pbMachine.DesiredState),
+		Spec:         pbadapter.ProtoToMachineSpec(pbMachine.Spec),
+		Containers:   make([]types.MachineCreateContainerOptions, len(pbMachine.Containers)),
+	}
+	for index, container := range pbMachine.Containers {
+		opts.Containers[index] = types.MachineCreateContainerOptions{
+			ContainerID: container.ContainerId,
+			Spec:        pbadapter.ProtoToContainerSpec(container.Spec),
+		}
+	}
+
+	_, err := s.machineService.Create(ctx, opts)
+	return err
 }

@@ -1,4 +1,4 @@
-package nodeservice
+package machineservice
 
 import (
 	"context"
@@ -10,7 +10,7 @@ func (s *Service) startGCWorker() {
 	ticker := time.NewTicker(time.Hour)
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-s.gcWorkerCtx.Done():
 			return
 		case <-ticker.C:
 			s.performGC()

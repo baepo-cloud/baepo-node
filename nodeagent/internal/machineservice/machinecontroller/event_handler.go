@@ -21,7 +21,7 @@ func (c *Controller) handleEvent(ctx context.Context, payload any) {
 			c.handleStateChange(ctx, typedEvent)
 		}
 	case *corev1pb.ContainerEvent:
-		fmt.Println(typedPayload)
+		fmt.Println(typedPayload.EventId)
 	}
 }
 

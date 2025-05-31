@@ -9,8 +9,9 @@ import (
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/apiserver"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/gatewayserver"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/imageprovider"
+	"github.com/baepo-cloud/baepo-node/nodeagent/internal/machineservice"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/networkprovider"
-	"github.com/baepo-cloud/baepo-node/nodeagent/internal/nodeservice"
+	"github.com/baepo-cloud/baepo-node/nodeagent/internal/registrationservice"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/runtimeprovider"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/volumeprovider"
@@ -41,10 +42,11 @@ func main() {
 		fx.Provide(fx.Annotate(runtimeprovider.New, fx.As(new(types.RuntimeProvider)))),
 		fx.Provide(fx.Annotate(volumeprovider.New, fx.As(new(types.VolumeProvider)))),
 		fx.Provide(provideControlPlaneApiClient),
-		fx.Provide(fx.Annotate(nodeservice.New, fx.As(new(types.NodeService)))),
+		fx.Provide(machineservice.New),
+		fx.Provide(registrationservice.New),
 		fx.Provide(apiserver.New),
 		fx.Provide(gatewayserver.New),
-		fx.Invoke(func(lc fx.Lifecycle, service types.NodeService) {
+		fx.Provide(func(lc fx.Lifecycle, service *machineservice.Service) types.MachineService {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {
 					return service.Start(ctx)
@@ -53,6 +55,18 @@ func main() {
 					return service.Stop(ctx)
 				},
 			})
+			return service
+		}),
+		fx.Provide(func(lc fx.Lifecycle, service *registrationservice.Service) types.RegistrationService {
+			lc.Append(fx.Hook{
+				OnStart: func(ctx context.Context) error {
+					return service.Start(ctx)
+				},
+				OnStop: func(ctx context.Context) error {
+					return service.Stop(ctx)
+				},
+			})
+			return service
 		}),
 		fx.Invoke(func(lc fx.Lifecycle, server *apiserver.Server) {
 			lc.Append(fx.Hook{

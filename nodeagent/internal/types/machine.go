@@ -1,6 +1,7 @@
 package types
 
 import (
+	"context"
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
@@ -43,6 +44,33 @@ type (
 		VolumeID    string
 		Volume      *Volume
 		CreatedAt   time.Time
+	}
+
+	MachineCreateOptions struct {
+		MachineID    string
+		DesiredState MachineDesiredState
+		Spec         MachineSpec
+		Containers   []MachineCreateContainerOptions
+	}
+
+	MachineCreateContainerOptions struct {
+		ContainerID string
+		Spec        ContainerSpec
+	}
+
+	MachineUpdateDesiredStateOptions struct {
+		MachineID    string
+		DesiredState MachineDesiredState
+	}
+
+	MachineService interface {
+		List(ctx context.Context) ([]*Machine, error)
+
+		FindByID(ctx context.Context, machineID string) (*Machine, error)
+
+		Create(ctx context.Context, opts MachineCreateOptions) (*Machine, error)
+
+		UpdateDesiredState(ctx context.Context, opts MachineUpdateDesiredStateOptions) (*Machine, error)
 	}
 )
 

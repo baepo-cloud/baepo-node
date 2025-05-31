@@ -56,6 +56,7 @@ func adaptContainerEventToProto(event any) *nodev1pb.InitEventsResponse {
 		}
 
 		return &nodev1pb.InitEventsResponse{
+			EventId:   value.EventID,
 			Timestamp: timestamppb.New(value.Timestamp),
 			Event: &nodev1pb.InitEventsResponse_ContainerStateChanged{
 				ContainerStateChanged: proto,

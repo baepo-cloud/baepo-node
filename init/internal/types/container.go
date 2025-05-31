@@ -7,6 +7,7 @@ import (
 
 type (
 	ContainerStateChangedEvent struct {
+		EventID          string
 		ContainerID      string
 		Healthy          bool
 		HealthcheckError error

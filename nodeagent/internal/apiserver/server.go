@@ -18,19 +18,26 @@ import (
 )
 
 type Server struct {
-	service         types.NodeService
-	runtimeProvider types.RuntimeProvider
-	config          *types.Config
-	httpServer      *http.Server
+	registrationService types.RegistrationService
+	machineService      types.MachineService
+	runtimeProvider     types.RuntimeProvider
+	config              *types.Config
+	httpServer          *http.Server
 }
 
 var _ nodev1pbconnect.NodeServiceHandler = (*Server)(nil)
 
-func New(service types.NodeService, runtimeProvider types.RuntimeProvider, config *types.Config) *Server {
+func New(
+	registrationService types.RegistrationService,
+	machineService types.MachineService,
+	runtimeProvider types.RuntimeProvider,
+	config *types.Config,
+) *Server {
 	return &Server{
-		service:         service,
-		runtimeProvider: runtimeProvider,
-		config:          config,
+		registrationService: registrationService,
+		machineService:      machineService,
+		runtimeProvider:     runtimeProvider,
+		config:              config,
 	}
 }
 
@@ -58,12 +65,12 @@ func (s *Server) Start(ctx context.Context) error {
 				ClientAuth: tls.RequireAndVerifyClientCert,
 				MinVersion: tls.VersionTLS12,
 			}
-			if cert := s.service.TLSCertificate(); cert != nil {
+			if cert := s.registrationService.TLSCertificate(); cert != nil {
 				config.Certificates = []tls.Certificate{*cert}
 			}
-			if cert := s.service.AuthorityCertificate(); cert != nil {
+			if cert := s.registrationService.AuthorityCertificate(); cert != nil {
 				config.ClientCAs = x509.NewCertPool()
-				config.ClientCAs.AddCert(s.service.AuthorityCertificate())
+				config.ClientCAs.AddCert(cert)
 			}
 			return config, nil
 		},

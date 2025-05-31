@@ -9,7 +9,7 @@ import (
 )
 
 func (s *Server) ListMachines(ctx context.Context, _ *connect.Request[nodev1pb.NodeListMachinesRequest]) (*connect.Response[nodev1pb.NodeListMachinesResponse], error) {
-	machines, err := s.service.ListMachines(ctx)
+	machines, err := s.machineService.List(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +24,7 @@ func (s *Server) ListMachines(ctx context.Context, _ *connect.Request[nodev1pb.N
 }
 
 func (s *Server) GetMachine(ctx context.Context, req *connect.Request[nodev1pb.NodeGetMachineRequest]) (*connect.Response[nodev1pb.NodeGetMachineResponse], error) {
-	machine, err := s.service.FindMachine(ctx, req.Msg.MachineId)
+	machine, err := s.machineService.FindByID(ctx, req.Msg.MachineId)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func (s *Server) GetMachine(ctx context.Context, req *connect.Request[nodev1pb.N
 }
 
 func (s *Server) GetMachineLogs(ctx context.Context, req *connect.Request[nodev1pb.NodeGetMachineLogsRequest], writeStream *connect.ServerStream[nodev1pb.NodeGetMachineLogsResponse]) error {
-	machine, err := s.service.FindMachine(ctx, req.Msg.MachineId)
+	machine, err := s.machineService.FindByID(ctx, req.Msg.MachineId)
 	if err != nil {
 		return err
 	}
