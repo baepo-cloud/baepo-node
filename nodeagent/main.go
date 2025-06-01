@@ -171,6 +171,7 @@ func provideGORM(config *types.Config) (*gorm.DB, error) {
 		&types.Image{},
 		&types.NetworkInterface{},
 		&types.Machine{},
+		&types.MachineEvent{},
 		&types.MachineVolume{},
 		&types.Container{},
 	)

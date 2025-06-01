@@ -96,10 +96,8 @@ func (s *Service) loadMachines(ctx context.Context) error {
 }
 
 func (s *Service) newMachineController(machine *types.Machine) *machinecontroller.Controller {
-	ctrl := machinecontroller.New(
-		s.db, s.volumeProvider, s.networkProvider, s.runtimeProvider, s.imageProvider,
-		machine,
-	)
+	ctrl := machinecontroller.New(s.db, s.volumeProvider, s.networkProvider, s.runtimeProvider,
+		s.imageProvider, machine)
 	ctrl.SubscribeToEvents(func(ctx context.Context, payload any) {
 		go func() {
 			if machineEvent, ok := payload.(*corev1pb.MachineEvent); ok {
@@ -107,5 +105,6 @@ func (s *Service) newMachineController(machine *types.Machine) *machinecontrolle
 			}
 		}()
 	})
+	ctrl.SubscribeToEvents(s.newMachineEventsHandler(machine))
 	return ctrl
 }

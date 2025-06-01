@@ -2,7 +2,6 @@ package machinecontroller
 
 import (
 	"context"
-	"fmt"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/pbadapter"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	corev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/core/v1"
@@ -20,8 +19,6 @@ func (c *Controller) handleEvent(ctx context.Context, payload any) {
 		case *corev1pb.MachineEvent_StateChanged:
 			c.handleStateChange(ctx, typedEvent)
 		}
-	case *corev1pb.ContainerEvent:
-		fmt.Println(typedPayload.EventId)
 	}
 }
 

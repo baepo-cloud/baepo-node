@@ -27,6 +27,19 @@ type (
 		TerminatedAt       *time.Time
 	}
 
+	MachineEventType string
+
+	MachineEvent struct {
+		ID          string `gorm:"primaryKey"`
+		Type        MachineEventType
+		MachineID   string
+		Machine     *Machine
+		ContainerID *string
+		Container   *Container
+		Payload     []byte
+		Timestamp   time.Time
+	}
+
 	MachineSpec struct {
 		Cpus     uint32
 		MemoryMB uint64
@@ -86,6 +99,10 @@ const (
 	MachineDesiredStatePending    MachineDesiredState = "pending"
 	MachineDesiredStateRunning    MachineDesiredState = "running"
 	MachineDesiredStateTerminated MachineDesiredState = "terminated"
+
+	MachineEventTypeStateChanged          MachineEventType = "state_changed"
+	MachineEventTypeDesiredStateChanged   MachineEventType = "desired_state_changed"
+	MachineEventTypeContainerStateChanged MachineEventType = "container_state_changed"
 )
 
 var ErrMachineNotFound = errors.New("machine not found")
@@ -112,5 +129,13 @@ func (s MachineState) MatchDesiredState(desired MachineDesiredState) bool {
 		return desired == MachineDesiredStateTerminated
 	default:
 		return false
+	}
+}
+
+func (e MachineEvent) ProtoPayload() any {
+	switch e.Type {
+
+	default:
+		return nil
 	}
 }

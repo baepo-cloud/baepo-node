@@ -60,7 +60,7 @@ func (b *Bus[T]) dispatchEvent(ctx context.Context, event T) {
 	p := pool.New().WithContext(ctx)
 	for _, handler := range b.eventHandlers {
 		p.Go(func(ctx context.Context) error {
-			handler(context.Background(), event)
+			handler(ctx, event)
 			return nil
 		})
 	}

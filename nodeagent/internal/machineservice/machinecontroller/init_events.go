@@ -110,6 +110,5 @@ func (c *Controller) handleInitEventStream(ctx context.Context, machineID string
 	if !hasReceived && err != nil {
 		*consecutiveErrorCount++
 	}
-
 	return err
 }
