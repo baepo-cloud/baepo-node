@@ -2,16 +2,15 @@ package machineservice
 
 import (
 	"context"
+	"github.com/baepo-cloud/baepo-node/nodeagent/internal/machineservice/machinecontroller"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 )
 
 func (s *Service) List(ctx context.Context) ([]*types.Machine, error) {
-	s.machineControllerLock.RLock()
-	defer s.machineControllerLock.RUnlock()
-
 	var machines []*types.Machine
-	for _, ctrl := range s.machineControllers {
+	s.machineControllers.ForEach(func(_ string, ctrl *machinecontroller.Controller) bool {
 		machines = append(machines, ctrl.GetMachine())
-	}
+		return true
+	})
 	return machines, nil
 }

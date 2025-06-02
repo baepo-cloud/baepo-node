@@ -27,8 +27,6 @@ func (s *Service) Create(ctx context.Context, opts types.MachineCreateOptions) (
 		return nil, fmt.Errorf("failed to create machine: %w", err)
 	}
 
-	s.machineControllerLock.Lock()
-	defer s.machineControllerLock.Unlock()
-	s.machineControllers[machine.ID] = s.newMachineController(machine)
+	s.machineControllers.Set(machine.ID, s.newMachineController(machine))
 	return machine, nil
 }

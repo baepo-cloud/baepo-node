@@ -6,10 +6,7 @@ import (
 )
 
 func (s *Service) FindByID(ctx context.Context, machineID string) (*types.Machine, error) {
-	s.machineControllerLock.RLock()
-	defer s.machineControllerLock.RUnlock()
-
-	ctrl, ok := s.machineControllers[machineID]
+	ctrl, ok := s.machineControllers.Get(machineID)
 	if !ok {
 		return nil, types.ErrMachineNotFound
 	}

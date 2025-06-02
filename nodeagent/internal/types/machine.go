@@ -5,6 +5,9 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
+	corev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/core/v1"
+	"google.golang.org/protobuf/proto"
 	"time"
 )
 
@@ -84,6 +87,10 @@ type (
 		Create(ctx context.Context, opts MachineCreateOptions) (*Machine, error)
 
 		UpdateDesiredState(ctx context.Context, opts MachineUpdateDesiredStateOptions) (*Machine, error)
+
+		ListEvents(ctx context.Context, machineID string) ([]*MachineEvent, error)
+
+		SubscribeToEvents(ctx context.Context) <-chan *MachineEvent
 	}
 )
 
@@ -132,10 +139,21 @@ func (s MachineState) MatchDesiredState(desired MachineDesiredState) bool {
 	}
 }
 
-func (e MachineEvent) ProtoPayload() any {
+func (e MachineEvent) ProtoPayload() (proto.Message, error) {
 	switch e.Type {
-
+	case MachineEventTypeContainerStateChanged:
+		var event corev1pb.ContainerEvent
+		if err := proto.Unmarshal(e.Payload, &event); err != nil {
+			return nil, err
+		}
+		return &event, nil
+	case MachineEventTypeDesiredStateChanged, MachineEventTypeStateChanged:
+		var event corev1pb.MachineEvent
+		if err := proto.Unmarshal(e.Payload, &event); err != nil {
+			return nil, err
+		}
+		return &event, nil
 	default:
-		return nil
+		return nil, fmt.Errorf("unknown proto type: %v", e.Type)
 	}
 }

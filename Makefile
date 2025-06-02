@@ -9,7 +9,7 @@ build-init:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o resources/baepo-init -ldflags "-s -w" init/main.go
 
 build-nodeagent:
-	go build -o resources/baepo-nodeagent -ldflags "-s -w" nodeagent/main.go
+	go build -race -o resources/baepo-nodeagent -ldflags "-s -w" nodeagent/main.go
 
 run-node: build-init build-initcontainer build-nodeagent
 	./resources/baepo-nodeagent

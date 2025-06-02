@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"net"
 )
 
 func (s *Service) AuthorityCertificate() *x509.Certificate {
@@ -14,14 +13,6 @@ func (s *Service) AuthorityCertificate() *x509.Certificate {
 
 func (s *Service) TLSCertificate() *tls.Certificate {
 	return s.tlsCert
-}
-
-func (s *Service) getEndpoint(addr string) string {
-	host, port, _ := net.SplitHostPort(addr)
-	if host == "" {
-		host = s.config.IPAddr
-	}
-	return net.JoinHostPort(host, port)
 }
 
 func parseCertificate(value []byte) (*x509.Certificate, error) {
