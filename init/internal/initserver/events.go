@@ -48,11 +48,11 @@ func adaptContainerEventToProto(event any) *nodev1pb.InitEventsResponse {
 
 		switch {
 		case value.ExitedAt != nil:
-			proto.State = corev1pb.ContainerState_MachineContainerState_Exited
+			proto.State = corev1pb.ContainerState_ContainerState_Exited
 		case value.StartedAt != nil:
-			proto.State = corev1pb.ContainerState_MachineContainerState_Running
+			proto.State = corev1pb.ContainerState_ContainerState_Running
 		default:
-			proto.State = corev1pb.ContainerState_MachineContainerState_Unknown
+			proto.State = corev1pb.ContainerState_ContainerState_Unknown
 		}
 
 		return &nodev1pb.InitEventsResponse{

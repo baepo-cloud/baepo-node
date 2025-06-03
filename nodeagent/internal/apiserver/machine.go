@@ -35,36 +35,41 @@ func (s *Server) GetMachine(ctx context.Context, req *connect.Request[nodev1pb.N
 }
 
 func (s *Server) GetMachineLogs(ctx context.Context, req *connect.Request[nodev1pb.NodeGetMachineLogsRequest], writeStream *connect.ServerStream[nodev1pb.NodeGetMachineLogsResponse]) error {
-	machine, err := s.machineService.FindByID(ctx, req.Msg.MachineId)
-	if err != nil {
-		return err
-	}
+	//machine, err := s.machineService.FindByID(ctx, req.Msg.MachineId)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//client, closeClient := s.runtimeProvider.NewInitClient(machine.ID)
+	//defer closeClient()
 
-	client, closeClient := s.runtimeProvider.NewInitClient(machine.ID)
-	defer closeClient()
-
-	readStream, err := client.GetLogs(ctx, connect.NewRequest(&nodev1pb.InitGetLogsRequest{
-		Container: req.Msg.ContainerName,
-		Follow:    req.Msg.Follow,
-	}))
-	if err != nil {
-		return err
-	}
-
-	for readStream.Receive() {
-		msg := readStream.Msg()
-		err = writeStream.Send(&nodev1pb.NodeGetMachineLogsResponse{
-			Error:         msg.Error,
-			ContainerName: msg.ContainerName,
-			Content:       msg.Content,
-			Timestamp:     msg.Timestamp,
-		})
-		if err != nil {
-			return err
-		}
-	}
+	//readStream, err := client.GetLogs(ctx, connect.NewRequest(&nodev1pb.InitGetLogsRequest{
+	//	Container: req.Msg.ContainerName,
+	//	Follow:    req.Msg.Follow,
+	//}))
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//for readStream.Receive() {
+	//	msg := readStream.Msg()
+	//	err = writeStream.Send(&nodev1pb.NodeGetMachineLogsResponse{
+	//		Error:         msg.Error,
+	//		ContainerName: msg.ContainerName,
+	//		Content:       msg.Content,
+	//		Timestamp:     msg.Timestamp,
+	//	})
+	//	if err != nil {
+	//		return err
+	//	}
+	//}
 
 	return nil
+}
+
+func (s *Server) GetContainerLogs(ctx context.Context, c *connect.Request[nodev1pb.NodeGetContainerLogsRequest], c2 *connect.ServerStream[nodev1pb.NodeGetContainerLogsResponse]) error {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (s *Server) adaptMachine(machine *types.Machine) *nodev1pb.Machine {

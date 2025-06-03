@@ -34,7 +34,7 @@ func (s *Service) syncMachines(ctx context.Context, machines []*apiv1pb.NodeCont
 			MachineID:    machine.ID,
 			DesiredState: types.MachineDesiredStateTerminated,
 		})
-		if err != nil {
+		if err != nil && !errors.Is(err, types.ErrMachineNotFound) {
 			return fmt.Errorf("failed to terminate machine: %w", err)
 		}
 	}

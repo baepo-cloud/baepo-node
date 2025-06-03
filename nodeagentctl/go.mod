@@ -5,7 +5,7 @@ go 1.24.2
 require (
 	connectrpc.com/connect v1.18.1
 	github.com/baepo-cloud/baepo-cli v0.0.0-20250428125150-7dd566c83a0d
-	github.com/baepo-cloud/baepo-proto/go v0.0.0-20250517105736-a90dd89a72ed
+	github.com/baepo-cloud/baepo-proto/go v0.0.0-20250603063731-92a2a28476d8
 	github.com/joho/godotenv v1.5.1
 	github.com/spf13/cobra v1.9.1
 )
