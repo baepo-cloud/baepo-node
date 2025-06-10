@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/alphadose/haxmap"
 	"github.com/baepo-cloud/baepo-node/core/eventbus"
+	coretypes "github.com/baepo-cloud/baepo-node/core/types"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/machineservice/machinecontroller"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	"gorm.io/gorm"
@@ -83,7 +84,7 @@ func (s *Service) loadMachines(ctx context.Context) error {
 		Preload("Volumes.Image.Volume").
 		Preload("Containers").
 		Preload("NetworkInterface").
-		Where("machines.state NOT IN ?", []types.MachineState{types.MachineStateTerminated}).
+		Where("machines.state NOT IN ?", []coretypes.MachineState{coretypes.MachineStateTerminated}).
 		Find(&machines).
 		Error
 	if err != nil {

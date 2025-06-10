@@ -24,7 +24,7 @@ func (p *Provider) ReleaseInterface(ctx context.Context, name string) error {
 	}
 
 	link, err := netlink.LinkByName(networkInterface.Name)
-	if err != nil {
+	if err != nil && !isLinkNotFoundError(err) {
 		return fmt.Errorf("failed to find interface %s: %w", networkInterface.Name, err)
 	}
 
@@ -34,15 +34,22 @@ func (p *Provider) ReleaseInterface(ctx context.Context, name string) error {
 			return fmt.Errorf("failed to save network interface in databaae: %w", err)
 		}
 
-		if err = p.applyTapFirewallRules(ctx, &networkInterface, true); err != nil {
-			return fmt.Errorf("failed to apply firewall rules to tap interface: %w", err)
-		}
+		if link != nil {
+			if err = p.applyTapFirewallRules(ctx, &networkInterface, true); err != nil {
+				return fmt.Errorf("failed to apply firewall rules to tap interface: %w", err)
+			}
 
-		if err = netlink.LinkDel(link); err != nil {
-			return fmt.Errorf("failed to delete interface %s: %w", networkInterface.Name, err)
+			if err = netlink.LinkDel(link); err != nil {
+				return fmt.Errorf("failed to delete interface %s: %w", networkInterface.Name, err)
+			}
 		}
 
 		p.allocatedIPs[p.calculateOffsetFromIP(networkInterface.IPAddress)] = ""
 		return nil
 	})
+}
+
+func isLinkNotFoundError(err error) bool {
+	var linkNotFoundError netlink.LinkNotFoundError
+	return errors.As(err, &linkNotFoundError)
 }

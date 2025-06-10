@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/baepo-cloud/baepo-node/nodeagent/internal/pbadapter"
+	"github.com/baepo-cloud/baepo-node/core/v1pbadapter"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	apiv1pb "github.com/baepo-cloud/baepo-proto/go/baepo/api/v1"
 	"io"
@@ -90,7 +90,7 @@ func (c *Connection) handleIncomingEvent(ctx context.Context, anyEvent *apiv1pb.
 	case *apiv1pb.NodeControllerServerEvent_UpdateMachineDesiredState:
 		_, err := c.service.machineService.UpdateDesiredState(ctx, types.MachineUpdateDesiredStateOptions{
 			MachineID:    event.UpdateMachineDesiredState.MachineId,
-			DesiredState: pbadapter.ProtoToMachineDesiredState(event.UpdateMachineDesiredState.DesiredState),
+			DesiredState: v1pbadapter.ToMachineDesiredState(event.UpdateMachineDesiredState.DesiredState),
 		})
 		return err
 	case *apiv1pb.NodeControllerServerEvent_Ping:

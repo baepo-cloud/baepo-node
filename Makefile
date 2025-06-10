@@ -19,7 +19,7 @@ upgrade-proto-version:
 	@echo "Usage: make upgrade-proto-version COMMIT=<commit-hash>"
 ifdef COMMIT
 	@echo "Upgrading to commit $(COMMIT) in all modules..."
-	@for dir in init nodeagent nodeagentctl; do \
+	@for dir in init nodeagent nodeagentctl vmruntime; do \
 		echo "Upgrading in $$dir..."; \
 		cd $$dir && go get -u github.com/baepo-cloud/baepo-proto/go@$(COMMIT) && cd ..; \
 	done

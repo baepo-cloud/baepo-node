@@ -30,3 +30,7 @@ func (s *ContainerSpec) Scan(value interface{}) error {
 func (s *ContainerSpec) Value() (driver.Value, error) {
 	return json.Marshal(s)
 }
+
+func (s *ContainerSpec) ToCore() *coretypes.ContainerSpec {
+	return (*coretypes.ContainerSpec)(s)
+}

@@ -2,6 +2,7 @@ package gatewayserver
 
 import (
 	"errors"
+	coretypes "github.com/baepo-cloud/baepo-node/core/types"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	"net"
 	"net/http"
@@ -23,7 +24,7 @@ func (s *Server) Handler() http.Handler {
 		} else if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
-		} else if machine.NetworkInterface == nil || machine.State != types.MachineStateRunning {
+		} else if machine.NetworkInterface == nil || machine.State != coretypes.MachineStateRunning {
 			w.WriteHeader(http.StatusBadGateway)
 			return
 		}

@@ -6,20 +6,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	coretypes "github.com/baepo-cloud/baepo-node/core/types"
 	corev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/core/v1"
 	"google.golang.org/protobuf/proto"
 	"time"
 )
 
 type (
-	MachineState string
-
-	MachineDesiredState string
-
 	Machine struct {
 		ID                 string `gorm:"primaryKey"`
-		State              MachineState
-		DesiredState       MachineDesiredState
+		State              coretypes.MachineState
+		DesiredState       coretypes.MachineDesiredState
 		RuntimePID         *int `gorm:"column:runtime_pid"`
 		Spec               *MachineSpec
 		NetworkInterfaceID *string
@@ -43,10 +40,7 @@ type (
 		Timestamp   time.Time
 	}
 
-	MachineSpec struct {
-		Cpus     uint32
-		MemoryMB uint64
-	}
+	MachineSpec coretypes.MachineSpec
 
 	MachineVolume struct {
 		ID          string
@@ -64,19 +58,19 @@ type (
 
 	MachineCreateOptions struct {
 		MachineID    string
-		DesiredState MachineDesiredState
-		Spec         MachineSpec
+		DesiredState coretypes.MachineDesiredState
+		Spec         *MachineSpec
 		Containers   []MachineCreateContainerOptions
 	}
 
 	MachineCreateContainerOptions struct {
 		ContainerID string
-		Spec        ContainerSpec
+		Spec        *coretypes.ContainerSpec
 	}
 
 	MachineUpdateDesiredStateOptions struct {
 		MachineID    string
-		DesiredState MachineDesiredState
+		DesiredState coretypes.MachineDesiredState
 	}
 
 	MachineService interface {
@@ -95,18 +89,6 @@ type (
 )
 
 const (
-	MachineStatePending     MachineState = "pending"
-	MachineStateStarting    MachineState = "starting"
-	MachineStateRunning     MachineState = "running"
-	MachineStateDegraded    MachineState = "degraded"
-	MachineStateError       MachineState = "error"
-	MachineStateTerminating MachineState = "terminating"
-	MachineStateTerminated  MachineState = "terminated"
-
-	MachineDesiredStatePending    MachineDesiredState = "pending"
-	MachineDesiredStateRunning    MachineDesiredState = "running"
-	MachineDesiredStateTerminated MachineDesiredState = "terminated"
-
 	MachineEventTypeStateChanged          MachineEventType = "state_changed"
 	MachineEventTypeDesiredStateChanged   MachineEventType = "desired_state_changed"
 	MachineEventTypeContainerStateChanged MachineEventType = "container_state_changed"
@@ -126,17 +108,8 @@ func (s *MachineSpec) Value() (driver.Value, error) {
 	return json.Marshal(s)
 }
 
-func (s MachineState) MatchDesiredState(desired MachineDesiredState) bool {
-	switch s {
-	case MachineStatePending:
-		return desired == MachineDesiredStatePending
-	case MachineStateRunning, MachineStateDegraded:
-		return desired == MachineDesiredStateRunning
-	case MachineStateTerminated:
-		return desired == MachineDesiredStateTerminated
-	default:
-		return false
-	}
+func (s *MachineSpec) ToCore() *coretypes.MachineSpec {
+	return (*coretypes.MachineSpec)(s)
 }
 
 func (e MachineEvent) ProtoPayload() (proto.Message, error) {

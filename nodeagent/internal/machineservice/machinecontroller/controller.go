@@ -3,7 +3,8 @@ package machinecontroller
 import (
 	"context"
 	"github.com/baepo-cloud/baepo-node/core/eventbus"
-	"github.com/baepo-cloud/baepo-node/nodeagent/internal/pbadapter"
+	coretypes "github.com/baepo-cloud/baepo-node/core/types"
+	"github.com/baepo-cloud/baepo-node/core/v1pbadapter"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	corev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/core/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -23,7 +24,7 @@ type Controller struct {
 	initListenerMutex          sync.Mutex
 	cancelInitListener         context.CancelFunc
 	machineMutex               sync.RWMutex
-	currentStateReconciliation *types.MachineDesiredState
+	currentStateReconciliation *coretypes.MachineDesiredState
 	reconciliationMutex        sync.Mutex
 	cancelReconciliation       func()
 	eventBus                   *eventbus.Bus[any]
@@ -58,7 +59,7 @@ func New(
 	ctrl.eventBus.SubscribeToEvents(ctrl.handleEvent)
 	ctrl.syncInitEventsListener()
 
-	if !machine.State.MatchDesiredState(machine.DesiredState) {
+	if !matchDesiredState(machine.State, machine.DesiredState) {
 		go ctrl.startReconciliation()
 	}
 
@@ -94,7 +95,7 @@ func (c *Controller) SubscribeToEvents(handler func(ctx context.Context, event a
 	return c.eventBus.SubscribeToEvents(handler)
 }
 
-func (c *Controller) SetDesiredState(desiredState types.MachineDesiredState) {
+func (c *Controller) SetDesiredState(desiredState coretypes.MachineDesiredState) {
 	machineID := c.GetMachine().ID
 	c.log.Info("set machine new desired state", slog.Any("desired-state", desiredState))
 	c.eventBus.PublishEvent(&corev1pb.MachineEvent{
@@ -102,7 +103,7 @@ func (c *Controller) SetDesiredState(desiredState types.MachineDesiredState) {
 		MachineId: machineID,
 		Event: &corev1pb.MachineEvent_DesiredStateChanged{
 			DesiredStateChanged: &corev1pb.MachineEvent_DesiredStateChangedEvent{
-				DesiredState: pbadapter.MachineDesiredStateToProto(desiredState),
+				DesiredState: v1pbadapter.FromMachineDesiredState(desiredState),
 			},
 		},
 	})
@@ -113,4 +114,17 @@ func (c *Controller) updateMachine(handler func(machine *types.Machine) error) e
 	defer c.machineMutex.Unlock()
 
 	return handler(c.machine)
+}
+
+func matchDesiredState(state coretypes.MachineState, desired coretypes.MachineDesiredState) bool {
+	switch state {
+	case coretypes.MachineStatePending:
+		return desired == coretypes.MachineDesiredStatePending
+	case coretypes.MachineStateRunning, coretypes.MachineStateDegraded:
+		return desired == coretypes.MachineDesiredStateRunning
+	case coretypes.MachineStateTerminated:
+		return desired == coretypes.MachineDesiredStateTerminated
+	default:
+		return false
+	}
 }

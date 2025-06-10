@@ -4,8 +4,8 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	coretypes "github.com/baepo-cloud/baepo-node/core/types"
 	"github.com/baepo-cloud/baepo-node/core/typeutil"
-	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	corev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/core/v1"
 	nodev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/node/v1"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -13,10 +13,10 @@ import (
 	"time"
 )
 
-var StatesToListenInit = []types.MachineState{
-	types.MachineStateStarting,
-	types.MachineStateRunning,
-	types.MachineStateDegraded,
+var StatesToListenInit = []coretypes.MachineState{
+	coretypes.MachineStateStarting,
+	coretypes.MachineStateRunning,
+	coretypes.MachineStateDegraded,
 }
 
 func (c *Controller) syncInitEventsListener() {
@@ -55,9 +55,9 @@ func (c *Controller) listenToInitEvents(ctx context.Context, machineID string) {
 					slog.Any("error", err),
 					slog.Int("consecutive-error", consecutiveErrorCount))
 				if consecutiveErrorCount >= 3 {
-					c.dispatchMachineStateChangeEvent(types.MachineStateError)
+					c.dispatchMachineStateChangeEvent(coretypes.MachineStateError)
 				} else if consecutiveErrorCount > 0 {
-					c.dispatchMachineStateChangeEvent(types.MachineStateDegraded)
+					c.dispatchMachineStateChangeEvent(coretypes.MachineStateDegraded)
 				}
 				ticker.Reset(time.Second)
 			}
@@ -78,7 +78,7 @@ func (c *Controller) handleInitEventStream(ctx context.Context, machineID string
 	hasReceived := false
 	for stream.Receive() {
 		if !hasReceived {
-			c.dispatchMachineStateChangeEvent(types.MachineStateRunning)
+			c.dispatchMachineStateChangeEvent(coretypes.MachineStateRunning)
 			*consecutiveErrorCount = 0
 			hasReceived = true
 		}

@@ -23,9 +23,9 @@ var (
 )
 
 func (c *Container) setupNetworking() error {
-	hostname := c.config.ContainerName
-	if hostname == "" {
-		hostname = c.config.ContainerID
+	hostname := c.config.ContainerID
+	if c.config.Name != nil {
+		hostname = *c.config.Name
 	}
 
 	if err := syscall.Sethostname([]byte(hostname)); err != nil {

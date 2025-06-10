@@ -3,7 +3,7 @@ package apiserver
 import (
 	"connectrpc.com/connect"
 	"context"
-	"github.com/baepo-cloud/baepo-node/nodeagent/internal/pbadapter"
+	"github.com/baepo-cloud/baepo-node/core/v1pbadapter"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	nodev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/node/v1"
 )
@@ -75,7 +75,7 @@ func (s *Server) GetContainerLogs(ctx context.Context, c *connect.Request[nodev1
 func (s *Server) adaptMachine(machine *types.Machine) *nodev1pb.Machine {
 	return &nodev1pb.Machine{
 		MachineId:    machine.ID,
-		State:        pbadapter.MachineStateToProto(machine.State),
-		DesiredState: pbadapter.MachineDesiredStateToProto(machine.DesiredState),
+		State:        v1pbadapter.FromMachineState(machine.State),
+		DesiredState: v1pbadapter.FromMachineDesiredState(machine.DesiredState),
 	}
 }

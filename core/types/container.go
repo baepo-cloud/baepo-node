@@ -1,13 +1,20 @@
 package types
 
 type (
+	Container struct {
+		ID   string
+		Spec ContainerSpec
+	}
+
 	ContainerSpec struct {
-		Name        string
+		Name        *string
 		Image       string
 		Env         map[string]string
 		Command     []string
+		User        *string
 		Healthcheck *ContainerHealthcheckSpec
-		WorkingDir  string
+		WorkingDir  *string
+		Restart     *ContainerRestartSpec
 	}
 
 	ContainerHealthcheckSpec struct {
@@ -22,4 +29,18 @@ type (
 		Port    int32
 		Headers map[string]string
 	}
+
+	ContainerRestartPolicy string
+
+	ContainerRestartSpec struct {
+		Policy     ContainerRestartPolicy
+		MaxRetries int32
+	}
+)
+
+const (
+	ContainerRestartPolicyUnknown   ContainerRestartPolicy = "unknown"
+	ContainerRestartPolicyNo        ContainerRestartPolicy = "no"
+	ContainerRestartPolicyOnFailure ContainerRestartPolicy = "on_failure"
+	ContainerRestartPolicyAlways    ContainerRestartPolicy = "always"
 )

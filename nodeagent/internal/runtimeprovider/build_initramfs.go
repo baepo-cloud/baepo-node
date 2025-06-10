@@ -35,32 +35,11 @@ func (p *Provider) BuildInitRamFS(ctx context.Context, opts types.RuntimeCreateO
 	}
 
 	for index, container := range opts.Machine.Containers {
-		machineVolume, ok := containerVolumes[container.ID]
-		if !ok {
-			return fmt.Errorf("failed to find machine volume")
-		}
-
-		imageSpec := machineVolume.Image.Spec
-		cfg := coretypes.InitContainerConfig{
+		initConfig.Containers[index] = coretypes.InitContainerConfig{
 			ContainerID:   container.ID,
-			ContainerName: container.Spec.Name,
-			Env:           imageSpec.Env,
-			Command:       imageSpec.Command,
-			User:          imageSpec.User,
-			WorkingDir:    imageSpec.WorkingDir,
+			ContainerSpec: *container.Spec.ToCore(),
 			Volume:        fmt.Sprintf("/dev/vd%v", string(alphabet[index%len(alphabet)])),
 		}
-		for key, value := range container.Spec.Env {
-			cfg.Env[key] = value
-		}
-		if container.Spec.WorkingDir != "" {
-			cfg.WorkingDir = container.Spec.WorkingDir
-		}
-		if container.Spec.Command != nil {
-			cfg.Command = container.Spec.Command
-		}
-
-		initConfig.Containers[index] = cfg
 	}
 
 	configFile, err := os.Create(filepath.Join(tmpDir, "config.json"))

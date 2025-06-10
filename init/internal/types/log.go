@@ -10,7 +10,7 @@ import (
 type (
 	LogEntry struct {
 		ContainerID   string
-		ContainerName string
+		ContainerName *string
 		Timestamp     time.Time
 		Error         bool
 		Content       string

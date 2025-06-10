@@ -3,6 +3,7 @@ package machinecontroller
 import (
 	"context"
 	"fmt"
+	coretypes "github.com/baepo-cloud/baepo-node/core/types"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	"log/slog"
 	"time"
@@ -55,13 +56,13 @@ func (c *Controller) startReconciliation() {
 	}()
 }
 
-func (c *Controller) reconcileState(ctx context.Context, desiredState types.MachineDesiredState) error {
+func (c *Controller) reconcileState(ctx context.Context, desiredState coretypes.MachineDesiredState) error {
 	switch desiredState {
-	case types.MachineDesiredStatePending:
+	case coretypes.MachineDesiredStatePending:
 		return c.reconcileToPendingState(ctx)
-	case types.MachineDesiredStateRunning:
+	case coretypes.MachineDesiredStateRunning:
 		return c.reconcileToRunningState(ctx)
-	case types.MachineDesiredStateTerminated:
+	case coretypes.MachineDesiredStateTerminated:
 		return c.reconcileToTerminatedState(ctx)
 	default:
 		return fmt.Errorf("cannot handle desired state: %v", c.machine.DesiredState)
@@ -90,7 +91,7 @@ func (c *Controller) reconcileToPendingState(ctx context.Context) error {
 
 func (c *Controller) reconcileToRunningState(ctx context.Context) error {
 	machine := c.GetMachine()
-	if machine.State == types.MachineStateError {
+	if machine.State == coretypes.MachineStateError {
 		if err := c.terminateMachine(ctx); err != nil {
 			return fmt.Errorf("failed to terminate machine: %w", err)
 		}
@@ -121,15 +122,15 @@ func (c *Controller) reconcileToRunningState(ctx context.Context) error {
 		return fmt.Errorf("failed to boot machine: %w", err)
 	}
 
-	c.dispatchMachineStateChangeEvent(types.MachineStateStarting)
+	c.dispatchMachineStateChangeEvent(coretypes.MachineStateStarting)
 	return nil
 }
 
 func (c *Controller) reconcileToTerminatedState(ctx context.Context) error {
-	c.dispatchMachineStateChangeEvent(types.MachineStateTerminating)
+	c.dispatchMachineStateChangeEvent(coretypes.MachineStateTerminating)
 	if err := c.terminateMachine(ctx); err != nil {
 		return fmt.Errorf("failed to terminate machine: %w", err)
 	}
-	c.dispatchMachineStateChangeEvent(types.MachineStateTerminated)
+	c.dispatchMachineStateChangeEvent(coretypes.MachineStateTerminated)
 	return nil
 }

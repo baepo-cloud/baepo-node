@@ -3,6 +3,7 @@ package machineservice
 import (
 	"context"
 	"fmt"
+	coretypes "github.com/baepo-cloud/baepo-node/core/types"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	"log/slog"
 )
@@ -11,16 +12,16 @@ func (s *Service) Create(ctx context.Context, opts types.MachineCreateOptions) (
 	s.log.Info("requesting machine creation", slog.String("machine-id", opts.MachineID))
 	machine := &types.Machine{
 		ID:           opts.MachineID,
-		State:        types.MachineStatePending,
+		State:        coretypes.MachineStatePending,
 		DesiredState: opts.DesiredState,
-		Spec:         &opts.Spec,
+		Spec:         opts.Spec,
 		Containers:   make([]*types.Container, len(opts.Containers)),
 	}
 	for index, container := range opts.Containers {
 		machine.Containers[index] = &types.Container{
 			ID:        container.ContainerID,
 			MachineID: machine.ID,
-			Spec:      &container.Spec,
+			Spec:      (*types.ContainerSpec)(container.Spec),
 		}
 	}
 	if err := s.db.WithContext(ctx).Save(&machine).Error; err != nil {

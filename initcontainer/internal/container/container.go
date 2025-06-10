@@ -38,23 +38,24 @@ func (c *Container) Start() error {
 		return fmt.Errorf("failed to setup networking: %w", err)
 	}
 
-	workingDir := c.config.WorkingDir
-	if workingDir == "" {
-		workingDir = "/"
+	workingDir := "/"
+	if c.config.WorkingDir != nil {
+		workingDir = *c.config.WorkingDir
 	}
 
 	if err := syscall.Chdir(workingDir); err != nil {
 		return fmt.Errorf("failed to change directory to %v: %w", workingDir, err)
 	}
 
-	if c.config.User == "" {
-		c.config.User = "root"
+	username := "root"
+	if c.config.User != nil {
+		username = *c.config.User
 	}
 
-	targetUser, err := user.Lookup(c.config.User)
+	targetUser, err := user.Lookup(username)
 	if err != nil {
-		if c.config.User != "root" {
-			return fmt.Errorf("failed to lookup user %s: %v", c.config.User, err)
+		if username != "root" {
+			return fmt.Errorf("failed to lookup user %s: %v", username, err)
 		}
 
 		targetUser = &user.User{
@@ -65,7 +66,9 @@ func (c *Container) Start() error {
 			HomeDir:  "/root",
 		}
 	}
-	c.config.Env["HOME"] = targetUser.HomeDir
+
+	env := c.config.Env
+	env["HOME"] = targetUser.HomeDir
 
 	uid, err := strconv.Atoi(targetUser.Uid)
 	if err != nil {
@@ -78,7 +81,7 @@ func (c *Container) Start() error {
 	}
 
 	c.cmd = exec.Command(c.config.Command[0], c.config.Command[1:]...)
-	for key, value := range c.config.Env {
+	for key, value := range env {
 		c.cmd.Env = append(c.cmd.Env, fmt.Sprintf("%s=%s", key, value))
 	}
 	c.cmd.SysProcAttr = &syscall.SysProcAttr{

@@ -85,13 +85,13 @@ func (c *Container) run(jsonConfig []byte) {
 		}
 		c.eventBus.PublishEvent(c.newContainerStateChangedEvent())
 
-		if c.config.Restart == nil || c.config.Restart.Policy == coretypes.RestartPolicyNo {
+		if c.config.Restart == nil || c.config.Restart.Policy == coretypes.ContainerRestartPolicyNo {
 			return
 		}
 
 		exitCode := c.cmd.ProcessState.ExitCode()
-		if c.config.Restart.Policy == coretypes.RestartPolicyOnFailure &&
-			(exitCode == 0 || (c.config.Restart.MaxRetries > 0 && c.restartCount.Load() >= c.config.Restart.MaxRetries)) {
+		if c.config.Restart.Policy == coretypes.ContainerRestartPolicyOnFailure && (exitCode == 0 || (c.config.Restart.MaxRetries > 0 &&
+			c.restartCount.Load() >= c.config.Restart.MaxRetries)) {
 			return
 		}
 
