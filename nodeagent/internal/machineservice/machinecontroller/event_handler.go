@@ -2,75 +2,75 @@ package machinecontroller
 
 import (
 	"context"
+	"fmt"
 	coretypes "github.com/baepo-cloud/baepo-node/core/types"
-	"github.com/baepo-cloud/baepo-node/core/v1pbadapter"
+	"github.com/baepo-cloud/baepo-node/core/typeutil"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
-	corev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/core/v1"
-	"github.com/nrednav/cuid2"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"log/slog"
+	"reflect"
+	"time"
 )
 
-func (c *Controller) handleEvent(ctx context.Context, payload any) {
-	switch typedPayload := payload.(type) {
-	case *corev1pb.MachineEvent:
-		switch typedEvent := typedPayload.Event.(type) {
-		case *corev1pb.MachineEvent_DesiredStateChanged:
-			c.handleDesiredStateChange(ctx, typedEvent)
-		case *corev1pb.MachineEvent_StateChanged:
-			c.handleStateChange(ctx, typedEvent)
+func (c *Controller) eventHandler(ctx context.Context, anyEvent any) {
+	c.log.Debug("handling event", slog.Any("event", anyEvent), slog.String("type", reflect.TypeOf(anyEvent).Elem().Name()))
+
+	switch event := anyEvent.(type) {
+	case *AssessStateMessage:
+		c.log.Debug("checking if reconciliation is needed")
+		state := c.GetState()
+		if c.shouldReconcile(state.Machine) {
+			c.reconcile()
 		}
-	}
-}
-
-func (c *Controller) handleDesiredStateChange(ctx context.Context, event *corev1pb.MachineEvent_DesiredStateChanged) {
-	desiredState := v1pbadapter.ToMachineDesiredState(event.DesiredStateChanged.DesiredState)
-	err := c.updateMachine(func(machine *types.Machine) error {
-		machine.DesiredState = desiredState
-		return c.db.WithContext(ctx).Select("DesiredState").Save(machine).Error
-	})
-	if err != nil {
-		c.log.Error("failed to update machine desired state",
-			slog.String("desired-state", string(desiredState)),
-			slog.Any("error", err))
-	}
-
-	machine := c.GetMachine()
-	if !matchDesiredState(machine.State, machine.DesiredState) {
-		go c.startReconciliation()
-	}
-}
-
-func (c *Controller) handleStateChange(ctx context.Context, event *corev1pb.MachineEvent_StateChanged) {
-	state := v1pbadapter.ToMachineState(event.StateChanged.State)
-	err := c.updateMachine(func(machine *types.Machine) error {
-		machine.State = state
-		return c.db.WithContext(ctx).Select("State").Save(machine).Error
-	})
-	if err != nil {
-		c.log.Error("failed to update machine state", slog.Any("state", state), slog.Any("error", err))
-	}
-
-	machine := c.GetMachine()
-	if !matchDesiredState(machine.State, machine.DesiredState) {
-		go c.startReconciliation()
-	}
-
-	c.syncInitEventsListener()
-}
-
-func (c *Controller) dispatchMachineStateChangeEvent(state coretypes.MachineState) {
-	machine := c.GetMachine()
-	if machine.State != state {
-		c.eventBus.PublishEvent(&corev1pb.MachineEvent{
-			EventId:   cuid2.Generate(),
-			MachineId: machine.ID,
-			Event: &corev1pb.MachineEvent_StateChanged{
-				StateChanged: &corev1pb.MachineEvent_StateChangedEvent{
-					State: v1pbadapter.FromMachineState(state),
-				},
-			},
-			Timestamp: timestamppb.Now(),
+		shouldStartInitListener := c.shouldStartInitListener(state.Machine)
+		if shouldStartInitListener && state.InitListener == nil {
+			c.startInitListener(state.Machine)
+		} else if !shouldStartInitListener && state.InitListener != nil {
+			state.InitListener.Cancel()
+		}
+	case *DesiredStateChangedMessage:
+		c.log.Debug("desired state changed", slog.String("new-state", string(event.DesiredState)))
+		_ = c.SetState(func(s *State) error {
+			s.Machine.DesiredState = event.DesiredState
+			return c.db.WithContext(ctx).Select("DesiredState").Save(&s.Machine).Error
 		})
+		c.eventBus.PublishEvent(&AssessStateMessage{})
+	case *StateChangedMessage:
+		c.log.Debug("machine state changed", slog.String("new-state", string(event.State)))
+		_ = c.SetState(func(s *State) error {
+			s.Machine.State = event.State
+			s.Machine.TerminatedAt = nil
+			if event.State == coretypes.MachineStateTerminated {
+				s.Machine.TerminatedAt = typeutil.Ptr(time.Now())
+			}
+			return c.db.WithContext(ctx).Select("State", "TerminatedAt").Save(&s.Machine).Error
+		})
+		c.eventBus.PublishEvent(&AssessStateMessage{})
+	case *InitListenerConnectedMessage:
+		if state := c.GetState(); state.Machine.State != coretypes.MachineStateRunning {
+			c.eventBus.PublishEvent(NewStateChangedMessage(coretypes.MachineStateRunning))
+		}
+		_ = c.SetState(func(s *State) error {
+			s.InitListener.ConsecutiveErrorCount = 0
+			return nil
+		})
+	case *InitListenerDisconnectedMessage:
+		state := c.GetState()
+		if state.InitListener.ConsecutiveErrorCount == 3 {
+			c.eventBus.PublishEvent(NewStateChangedMessage(coretypes.MachineStateError))
+		} else if state.InitListener.ConsecutiveErrorCount == 1 {
+			c.eventBus.PublishEvent(NewStateChangedMessage(coretypes.MachineStateDegraded))
+		}
+	case *InitContainerStateChangedMessage:
+		state := c.GetState()
+
+		var container *types.Container
+		for _, current := range state.Machine.Containers {
+			if current.ID == event.Event.ContainerId {
+				container = current
+				break
+			}
+		}
+
+		fmt.Println(container)
 	}
 }
