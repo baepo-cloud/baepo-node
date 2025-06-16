@@ -4,127 +4,113 @@ import (
 	"context"
 	"github.com/baepo-cloud/baepo-node/core/eventbus"
 	coretypes "github.com/baepo-cloud/baepo-node/core/types"
-	"github.com/baepo-cloud/baepo-node/core/v1pbadapter"
+	"github.com/baepo-cloud/baepo-node/core/typeutil"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
-	corev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/core/v1"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"gorm.io/gorm"
 	"log/slog"
 	"sync"
 )
 
-type Controller struct {
-	log                        *slog.Logger
-	db                         *gorm.DB
-	volumeProvider             types.VolumeProvider
-	networkProvider            types.NetworkProvider
-	runtimeProvider            types.RuntimeProvider
-	imageProvider              types.ImageProvider
-	machine                    *types.Machine
-	initListenerMutex          sync.Mutex
-	cancelInitListener         context.CancelFunc
-	machineMutex               sync.RWMutex
-	currentStateReconciliation *coretypes.MachineDesiredState
-	reconciliationMutex        sync.Mutex
-	cancelReconciliation       func()
-	eventBus                   *eventbus.Bus[any]
-	eventCancelDispatcher      context.CancelFunc
-}
+type (
+	State struct {
+		Machine        *types.Machine
+		Reconciliation *Reconciliation
+		InitListener   *InitListener
+	}
+
+	Controller struct {
+		log       *slog.Logger
+		state     *State
+		stateLock sync.RWMutex
+		eventBus  *eventbus.Bus[any]
+		cancel    context.CancelFunc
+		wg        sync.WaitGroup
+
+		db              *gorm.DB
+		volumeProvider  types.VolumeProvider
+		networkProvider types.NetworkProvider
+		runtimeProvider types.RuntimeProvider
+		imageProvider   types.ImageProvider
+	}
+)
 
 func New(
+	machine *types.Machine,
 	db *gorm.DB,
 	volumeProvider types.VolumeProvider,
 	networkProvider types.NetworkProvider,
 	runtimeProvider types.RuntimeProvider,
 	imageProvider types.ImageProvider,
-	machine *types.Machine,
 ) *Controller {
+	ctx, cancel := context.WithCancel(context.Background())
 	ctrl := &Controller{
 		log: slog.With(
 			slog.String("component", "machinecontroller"),
 			slog.String("machine-id", machine.ID)),
+		state: &State{
+			Machine: machine,
+		},
+		eventBus:        eventbus.NewBus[any](),
+		cancel:          cancel,
 		db:              db,
 		volumeProvider:  volumeProvider,
 		networkProvider: networkProvider,
 		runtimeProvider: runtimeProvider,
 		imageProvider:   imageProvider,
-		machine:         machine,
-		eventBus:        eventbus.NewBus[any](),
 	}
 
-	eventDispatcherCtx, eventCancelDispatcher := context.WithCancel(context.Background())
-	ctrl.eventCancelDispatcher = eventCancelDispatcher
-	go ctrl.eventBus.StartDispatcher(eventDispatcherCtx)
+	ctrl.wg.Add(1)
+	go func() {
+		defer ctrl.wg.Done()
+		ctrl.eventBus.StartDispatcher(ctx)
+	}()
 
-	ctrl.eventBus.SubscribeToEvents(ctrl.handleEvent)
-	ctrl.syncInitEventsListener()
-
-	if !matchDesiredState(machine.State, machine.DesiredState) {
-		go ctrl.startReconciliation()
-	}
-
+	ctrl.eventBus.SubscribeToEvents(ctrl.eventHandler)
+	ctrl.eventBus.PublishEvent(&AssessStateMessage{})
 	return ctrl
 }
 
-func (c *Controller) GetMachine() *types.Machine {
-	c.machineMutex.RLock()
-	defer c.machineMutex.RUnlock()
-
-	copiedMachine := *c.machine
-	return &copiedMachine
+func (c *Controller) Stop() error {
+	state := c.GetState()
+	if state.InitListener != nil {
+		state.InitListener.Cancel()
+	}
+	if state.Reconciliation != nil {
+		state.Reconciliation.Cancel()
+	}
+	c.cancel()
+	c.wg.Wait()
+	return nil
 }
 
-func (c *Controller) Stop() {
-	c.initListenerMutex.Lock()
-	defer c.initListenerMutex.Unlock()
-	c.reconciliationMutex.Lock()
-	defer c.reconciliationMutex.Unlock()
+func (c *Controller) GetState() *State {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
 
-	if c.cancelInitListener != nil {
-		c.cancelInitListener()
+	stateCopy := *c.state
+	stateCopy.Machine = typeutil.Ptr(*c.state.Machine)
+	if c.state.Reconciliation != nil {
+		stateCopy.Reconciliation = typeutil.Ptr(*c.state.Reconciliation)
 	}
-	if c.cancelReconciliation != nil {
-		c.cancelReconciliation()
+	if c.state.InitListener != nil {
+		stateCopy.InitListener = typeutil.Ptr(*c.state.InitListener)
 	}
-	if c.eventCancelDispatcher != nil {
-		c.eventCancelDispatcher()
-	}
+	return &stateCopy
 }
 
-func (c *Controller) SubscribeToEvents(handler func(ctx context.Context, event any)) func() {
-	return c.eventBus.SubscribeToEvents(handler)
+func (c *Controller) SetState(updater func(state *State) error) error {
+	state := c.GetState()
+
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+	if err := updater(state); err != nil {
+		return err
+	}
+
+	c.state = state
+	return nil
 }
 
 func (c *Controller) SetDesiredState(desiredState coretypes.MachineDesiredState) {
-	machineID := c.GetMachine().ID
-	c.log.Info("set machine new desired state", slog.Any("desired-state", desiredState))
-	c.eventBus.PublishEvent(&corev1pb.MachineEvent{
-		Timestamp: timestamppb.Now(),
-		MachineId: machineID,
-		Event: &corev1pb.MachineEvent_DesiredStateChanged{
-			DesiredStateChanged: &corev1pb.MachineEvent_DesiredStateChangedEvent{
-				DesiredState: v1pbadapter.FromMachineDesiredState(desiredState),
-			},
-		},
-	})
-}
-
-func (c *Controller) updateMachine(handler func(machine *types.Machine) error) error {
-	c.machineMutex.Lock()
-	defer c.machineMutex.Unlock()
-
-	return handler(c.machine)
-}
-
-func matchDesiredState(state coretypes.MachineState, desired coretypes.MachineDesiredState) bool {
-	switch state {
-	case coretypes.MachineStatePending:
-		return desired == coretypes.MachineDesiredStatePending
-	case coretypes.MachineStateRunning, coretypes.MachineStateDegraded:
-		return desired == coretypes.MachineDesiredStateRunning
-	case coretypes.MachineStateTerminated:
-		return desired == coretypes.MachineDesiredStateTerminated
-	default:
-		return false
-	}
+	c.eventBus.PublishEvent(NewDesiredStateChangedMessage(desiredState))
 }

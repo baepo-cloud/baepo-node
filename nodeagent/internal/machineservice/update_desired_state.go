@@ -12,5 +12,5 @@ func (s *Service) UpdateDesiredState(ctx context.Context, opts types.MachineUpda
 	}
 
 	ctrl.SetDesiredState(opts.DesiredState)
-	return ctrl.GetMachine(), nil
+	return ctrl.GetState().Machine, nil
 }

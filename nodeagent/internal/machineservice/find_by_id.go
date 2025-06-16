@@ -11,5 +11,5 @@ func (s *Service) FindByID(ctx context.Context, machineID string) (*types.Machin
 		return nil, types.ErrMachineNotFound
 	}
 
-	return ctrl.GetMachine(), nil
+	return ctrl.GetState().Machine, nil
 }
