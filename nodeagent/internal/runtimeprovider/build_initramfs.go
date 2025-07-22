@@ -70,12 +70,6 @@ func (p *Provider) BuildInitRamFS(ctx context.Context, opts types.RuntimeCreateO
 		if containerSpec.Command == nil {
 			containerSpec.Command = imageSpec.Command
 		}
-		if containerSpec.Restart == nil {
-			containerSpec.Restart = &coretypes.ContainerRestartSpec{
-				Policy:     coretypes.ContainerRestartPolicyOnFailure,
-				MaxRetries: 3,
-			}
-		}
 
 		initConfig.Containers[index] = coretypes.InitContainerConfig{
 			ContainerID:   container.ID,

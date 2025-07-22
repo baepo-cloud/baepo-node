@@ -2,10 +2,8 @@ package machinecontroller
 
 import (
 	"context"
-	"fmt"
 	coretypes "github.com/baepo-cloud/baepo-node/core/types"
 	"github.com/baepo-cloud/baepo-node/core/typeutil"
-	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	"log/slog"
 	"reflect"
 	"time"
@@ -60,17 +58,5 @@ func (c *Controller) eventHandler(ctx context.Context, anyEvent any) {
 		} else if state.InitListener.ConsecutiveErrorCount == 1 {
 			c.eventBus.PublishEvent(NewStateChangedMessage(coretypes.MachineStateDegraded))
 		}
-	case *InitContainerStateChangedMessage:
-		state := c.GetState()
-
-		var container *types.Container
-		for _, current := range state.Machine.Containers {
-			if current.ID == event.Event.ContainerId {
-				container = current
-				break
-			}
-		}
-
-		fmt.Println(container)
 	}
 }

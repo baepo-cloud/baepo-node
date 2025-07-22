@@ -39,7 +39,7 @@ type (
 )
 
 const (
-	ContainerRestartPolicyUnknown   ContainerRestartPolicy = "unknown"
+	ContainerRestartPolicyUnknown   ContainerRestartPolicy = ""
 	ContainerRestartPolicyNo        ContainerRestartPolicy = "no"
 	ContainerRestartPolicyOnFailure ContainerRestartPolicy = "on_failure"
 	ContainerRestartPolicyAlways    ContainerRestartPolicy = "always"

@@ -79,7 +79,6 @@ func (c *Controller) connectToInitListener(ctx context.Context, machineID string
 		}
 
 		msg := stream.Msg()
-		c.log.Debug("received event from init", slog.Any("event", msg))
 		if event, ok := msg.Event.(*nodev1pb.InitEventsResponse_ContainerStateChanged); ok {
 			c.eventBus.PublishEvent(&InitContainerStateChangedMessage{
 				EventID:   msg.EventId,
