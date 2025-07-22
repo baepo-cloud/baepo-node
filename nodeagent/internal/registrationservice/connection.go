@@ -42,7 +42,7 @@ func (s *Service) openConnection(ctx context.Context) error {
 	conn.log = s.log.With(slog.String("node-id", registration.NodeId))
 	conn.log.Info("node registration completed")
 
-	if err = conn.startMachineEventListener(ctx, registration.ExpectedMachines); err != nil {
+	if err = conn.startMachineEventListener(ctx); err != nil {
 		return fmt.Errorf("failed to start machine event listener: %w", err)
 	} else if err = conn.syncMachines(ctx, registration.ExpectedMachines); err != nil {
 		return fmt.Errorf("failed to sync machines: %w", err)

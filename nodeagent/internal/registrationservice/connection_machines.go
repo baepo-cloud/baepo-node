@@ -15,7 +15,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func (c *Connection) startMachineEventListener(ctx context.Context, machines []*apiv1pb.NodeControllerServerEvent_Machine) error {
+func (c *Connection) startMachineEventListener(ctx context.Context) error {
 	events := c.service.machineService.SubscribeToEvents(ctx)
 	go func() {
 		for event := range events {
@@ -99,7 +99,7 @@ func (c *Connection) reconcileWithExpectedMachine(ctx context.Context, spec *api
 		}
 	}
 	if shouldSendFakeTerminationEvents {
-		err := c.stream.Send(&apiv1pb.NodeControllerClientEvent{
+		err = c.stream.Send(&apiv1pb.NodeControllerClientEvent{
 			Event: &apiv1pb.NodeControllerClientEvent_Machine{
 				Machine: &corev1pb.MachineEvent{
 					EventId: cuid2.Generate(),
