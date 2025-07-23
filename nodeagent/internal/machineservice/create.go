@@ -10,9 +10,9 @@ import (
 	"log/slog"
 )
 
-func (s *Service) Create(ctx context.Context, opts types.MachineCreateOptions) (*types.Machine, error) {
+func (s *Service) Create(ctx context.Context, opts types.MachineCreateOptions) (machine *types.Machine, err error) {
 	s.log.Info("requesting machine creation", slog.String("machine-id", opts.MachineID))
-	machine := &types.Machine{
+	machine = &types.Machine{
 		ID:           opts.MachineID,
 		State:        coretypes.MachineStatePending,
 		DesiredState: opts.DesiredState,
@@ -52,7 +52,20 @@ func (s *Service) Create(ctx context.Context, opts types.MachineCreateOptions) (
 		})
 	}
 
-	err := s.db.WithContext(ctx).Session(&gorm.Session{FullSaveAssociations: true}).Create(&machine).Error
+	networkInterface, err := s.networkProvider.AllocateInterface(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to allocate network interface: %w", err)
+	}
+
+	machine.NetworkInterfaceID = &networkInterface.ID
+	machine.NetworkInterface = networkInterface
+	defer func() {
+		if err != nil {
+			_ = s.networkProvider.ReleaseInterface(context.Background(), networkInterface)
+		}
+	}()
+
+	err = s.db.WithContext(ctx).Session(&gorm.Session{FullSaveAssociations: true}).Create(&machine).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to create machine: %w", err)
 	}

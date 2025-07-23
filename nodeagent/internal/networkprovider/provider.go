@@ -5,11 +5,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
-	"github.com/vishvananda/netlink"
 	"gorm.io/gorm"
 	"net"
 	"os/exec"
-	"strings"
 	"sync"
 )
 
@@ -49,19 +47,16 @@ func New(db *gorm.DB) (*Provider, error) {
 	p.allocatedIPs[p.calculateOffsetFromIP(p.networkAddr)] = "network" // claim network address
 	p.allocatedIPs[p.calculateOffsetFromIP(p.gatewayAddr)] = "br0"     // claim gateway address
 
-	links, err := netlink.LinkList()
+	var allocatedNetworkInterfaces []*types.NetworkInterface
+	err = db.WithContext(context.Background()).Find(&allocatedNetworkInterfaces, "released_at IS NULL").Error
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not find allocated network interfaces: %w", err)
 	}
 
-	for _, link := range links {
-		if tapName := link.Attrs().Name; strings.HasPrefix(tapName, "tap") {
-			hwAddr := link.Attrs().HardwareAddr
-			if index := p.calculateIndexFromHwAddr(hwAddr); index != -1 {
-				p.allocatedIPs[index] = tapName
-			}
-		}
+	for _, networkInterface := range allocatedNetworkInterfaces {
+		p.allocatedIPs[p.calculateOffsetFromIP(networkInterface.IPAddress)] = networkInterface.Name
 	}
+
 	return p, nil
 }
 

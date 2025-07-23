@@ -168,8 +168,14 @@ func (c *Controller) reconcileToTerminated(ctx context.Context, machine *types.M
 		}
 	}
 
-	if err := c.cleanupResources(ctx, machine); err != nil {
-		return coretypes.MachineStateError, fmt.Errorf("failed to cleanup resources: %w", err)
+	if err := c.networkProvider.ReleaseInterface(ctx, machine.NetworkInterface); err != nil {
+		return coretypes.MachineStateError, fmt.Errorf("failed to release network interface (%v): %w", machine.NetworkInterface.ID, err)
+	}
+
+	for _, machineVolume := range machine.Volumes {
+		if err := c.volumeProvider.Release(ctx, machineVolume.Volume); err != nil {
+			return coretypes.MachineStateError, fmt.Errorf("failed to release volume (%v): %w", machineVolume.VolumeID, err)
+		}
 	}
 
 	return coretypes.MachineStateTerminated, nil
@@ -184,8 +190,10 @@ func (c *Controller) prepareMachine(ctx context.Context, machine *types.Machine)
 
 	p := pool.New().WithErrors().WithContext(ctx)
 	p.Go(func(ctx context.Context) error {
-		if err := c.prepareNetwork(ctx, machine); err != nil {
-			return fmt.Errorf("failed to prepare network: %w", err)
+		c.log.Debug("setting up network interface")
+		err := c.networkProvider.SetupInterface(ctx, machine.NetworkInterface)
+		if err != nil {
+			return fmt.Errorf("failed to set up network interface: %w", err)
 		}
 
 		return nil
@@ -217,30 +225,6 @@ func (c *Controller) prepareMachine(ctx context.Context, machine *types.Machine)
 	return p.Wait()
 }
 
-func (c *Controller) prepareNetwork(ctx context.Context, machine *types.Machine) error {
-	if machine.NetworkInterface != nil {
-		return nil
-	}
-
-	c.log.Debug("preparing network interface")
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-
-	networkInterface, err := c.networkProvider.AllocateInterface(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to allocate network interface: %w", err)
-	}
-
-	machine.NetworkInterfaceID = &networkInterface.ID
-	machine.NetworkInterface = networkInterface
-	return c.SetState(func(state *State) error {
-		state.Machine.NetworkInterfaceID = &networkInterface.ID
-		state.Machine.NetworkInterface = networkInterface
-		return c.db.WithContext(ctx).Select("NetworkInterfaceID").Save(state.Machine).Error
-	})
-}
-
 func (c *Controller) terminateRuntime(ctx context.Context, machine *types.Machine) error {
 	c.log.Debug("terminating runtime", slog.Int("pid", *machine.RuntimePID))
 	if err := c.runtimeProvider.Terminate(ctx, machine.ID); err != nil {
@@ -253,22 +237,6 @@ func (c *Controller) terminateRuntime(ctx context.Context, machine *types.Machin
 	})
 	if err != nil {
 		return fmt.Errorf("failed to update runtime PID: %w", err)
-	}
-
-	return nil
-}
-
-func (c *Controller) cleanupResources(ctx context.Context, machine *types.Machine) error {
-	if machine.NetworkInterface != nil {
-		if err := c.networkProvider.ReleaseInterface(ctx, machine.NetworkInterface.Name); err != nil {
-			c.log.Error("failed to release network interface", slog.Any("error", err))
-		}
-	}
-
-	for _, machineVolume := range machine.Volumes {
-		if err := c.volumeProvider.Release(ctx, machineVolume.Volume); err != nil {
-			c.log.Error("failed to delete volume", slog.String("volume-id", machineVolume.VolumeID), slog.Any("error", err))
-		}
 	}
 
 	return nil

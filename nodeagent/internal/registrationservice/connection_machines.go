@@ -29,7 +29,7 @@ func (c *Connection) startMachineEventListener(ctx context.Context) error {
 }
 
 func (c *Connection) syncMachines(ctx context.Context, machines []*apiv1pb.NodeControllerServerEvent_Machine) error {
-	c.log.Info("processing expected machines list")
+	c.log.Info("syncing machines")
 	expectedMachines := map[string]bool{}
 	for _, spec := range machines {
 		machine, err := c.reconcileWithExpectedMachine(ctx, spec)

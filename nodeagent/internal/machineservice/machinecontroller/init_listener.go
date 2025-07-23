@@ -37,7 +37,7 @@ func (c *Controller) startInitListener(machine *types.Machine) {
 
 	c.wg.Add(1)
 	go func() {
-		ticker := time.NewTicker(1)
+		ticker := time.NewTicker(10 * time.Millisecond)
 		defer ticker.Stop()
 		defer c.wg.Done()
 

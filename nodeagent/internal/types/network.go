@@ -18,8 +18,9 @@ type (
 		MacAddress     net.HardwareAddr `gorm:"type:text"`
 		GatewayAddress net.IP           `gorm:"type:text"`
 		NetworkCIDR    *GormNetIPNet    `gorm:"column:network_cidr"`
+		AllocatedAt    *time.Time
+		ReleasedAt     *time.Time
 		CreatedAt      time.Time
-		DeletedAt      *time.Time
 	}
 
 	NetworkProvider interface {
@@ -27,7 +28,9 @@ type (
 
 		AllocateInterface(ctx context.Context) (*NetworkInterface, error)
 
-		ReleaseInterface(ctx context.Context, name string) error
+		SetupInterface(ctx context.Context, networkInterface *NetworkInterface) error
+
+		ReleaseInterface(ctx context.Context, networkInterface *NetworkInterface) error
 	}
 )
 
