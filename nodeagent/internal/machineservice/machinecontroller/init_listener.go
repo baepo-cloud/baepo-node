@@ -19,7 +19,6 @@ type InitListener struct {
 
 func (c *Controller) shouldStartInitListener(machine *types.Machine) bool {
 	return typeutil.Includes([]coretypes.MachineState{
-		coretypes.MachineStateStarting,
 		coretypes.MachineStateRunning,
 		coretypes.MachineStateDegraded,
 	}, machine.State)

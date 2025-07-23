@@ -52,7 +52,17 @@ func (c *Controller) eventHandler(ctx context.Context, anyEvent any) {
 			return nil
 		})
 	case *InitListenerDisconnectedMessage:
+		_ = c.SetState(func(s *State) error {
+			if s.InitListener != nil {
+				s.InitListener.ConsecutiveErrorCount++
+			}
+			return nil
+		})
 		state := c.GetState()
+		if state.InitListener == nil {
+			return
+		}
+
 		if state.InitListener.ConsecutiveErrorCount == 3 {
 			c.eventBus.PublishEvent(NewStateChangedMessage(coretypes.MachineStateError))
 		} else if state.InitListener.ConsecutiveErrorCount == 1 {

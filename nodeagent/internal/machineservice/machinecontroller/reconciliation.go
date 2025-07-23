@@ -2,8 +2,9 @@ package machinecontroller
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/nrednav/cuid2"
+	"github.com/sourcegraph/conc/pool"
 	"time"
 
 	coretypes "github.com/baepo-cloud/baepo-node/core/types"
@@ -22,9 +23,7 @@ func (c *Controller) shouldReconcile(machine *types.Machine) bool {
 	case coretypes.MachineDesiredStatePending:
 		return machine.State != coretypes.MachineStatePending
 	case coretypes.MachineDesiredStateRunning:
-		return machine.State != coretypes.MachineStateStarting &&
-			machine.State != coretypes.MachineStateRunning &&
-			machine.State != coretypes.MachineStateDegraded
+		return machine.State != coretypes.MachineStateRunning && machine.State != coretypes.MachineStateDegraded
 	case coretypes.MachineDesiredStateTerminated:
 		return machine.State != coretypes.MachineStateTerminated
 	default:
@@ -95,21 +94,15 @@ func (c *Controller) reconcileToPending(ctx context.Context, machine *types.Mach
 	c.log.Debug("reconciling to pending state")
 
 	if machine.RuntimePID != nil && *machine.RuntimePID > 0 {
-		c.log.Debug("stopping runtime", slog.Int("pid", *machine.RuntimePID))
-		if err := c.runtimeProvider.Terminate(ctx, machine.ID); err != nil {
-			return coretypes.MachineStateError, fmt.Errorf("failed to terminate runtime: %w", err)
+		if machine.State != coretypes.MachineStateTerminating {
+			c.eventBus.PublishEvent(NewStateChangedMessage(coretypes.MachineStateTerminating))
 		}
-
-		err := c.SetState(func(state *State) error {
-			state.Machine.RuntimePID = nil
-			return c.db.WithContext(ctx).Select("RuntimePID").Save(state.Machine).Error
-		})
-		if err != nil {
-			return coretypes.MachineStateError, fmt.Errorf("failed to update runtime PID: %w", err)
+		if err := c.terminateRuntime(ctx, machine); err != nil {
+			return coretypes.MachineStateError, fmt.Errorf("failed to terminate runtime: %w", err)
 		}
 	}
 
-	if err := c.prepareResources(ctx, machine); err != nil {
+	if err := c.prepareMachine(ctx, machine); err != nil {
 		return coretypes.MachineStateError, fmt.Errorf("failed to prepare resources: %w", err)
 	}
 
@@ -117,22 +110,26 @@ func (c *Controller) reconcileToPending(ctx context.Context, machine *types.Mach
 }
 
 func (c *Controller) reconcileToRunning(ctx context.Context, machine *types.Machine) (coretypes.MachineState, error) {
+	if machine.State != coretypes.MachineStateStarting {
+		c.eventBus.PublishEvent(NewStateChangedMessage(coretypes.MachineStateStarting))
+	}
+
 	c.log.Debug("reconciling to running state")
-	if machine.State == coretypes.MachineStateError {
+	if machine.State == coretypes.MachineStateError && machine.RuntimePID != nil && *machine.RuntimePID > 0 {
 		c.log.Debug("cleaning up error state")
-		if err := c.cleanupErrorState(ctx, machine); err != nil {
+		if err := c.terminateRuntime(ctx, machine); err != nil {
 			return coretypes.MachineStateError, fmt.Errorf("failed to cleanup error state: %w", err)
 		}
 	}
 
-	if err := c.prepareResources(ctx, machine); err != nil {
+	if err := c.prepareMachine(ctx, machine); err != nil {
 		return coretypes.MachineStateError, fmt.Errorf("failed to prepare resources: %w", err)
 	}
 
 	if machine.RuntimePID == nil || *machine.RuntimePID <= 0 {
 		c.log.Debug("starting runtime")
 		if ctx.Err() != nil {
-			return coretypes.MachineStatePending, ctx.Err()
+			return coretypes.MachineStateError, ctx.Err()
 		}
 
 		pid, err := c.runtimeProvider.Create(ctx, types.RuntimeCreateOptions{
@@ -148,28 +145,26 @@ func (c *Controller) reconcileToRunning(ctx context.Context, machine *types.Mach
 		})
 		if err != nil {
 			return coretypes.MachineStateError, fmt.Errorf("failed to save runtime PID: %w", err)
-		} else if err = c.runtimeProvider.Boot(ctx, machine.ID); err != nil {
+		}
+
+		if err = c.runtimeProvider.Boot(ctx, machine.ID); err != nil {
 			return coretypes.MachineStateError, fmt.Errorf("failed to boot machine: %w", err)
 		}
 
 		c.log.Debug("runtime started successfully", slog.Int("pid", pid))
 	}
 
-	return coretypes.MachineStateStarting, nil
+	return coretypes.MachineStateRunning, nil
 }
 
 func (c *Controller) reconcileToTerminated(ctx context.Context, machine *types.Machine) (coretypes.MachineState, error) {
 	c.log.Debug("reconciling to terminated state")
 	if machine.RuntimePID != nil && *machine.RuntimePID > 0 {
-		if err := c.runtimeProvider.Terminate(ctx, machine.ID); err != nil {
-			return coretypes.MachineStateError, fmt.Errorf("failed to terminate runtime: %w", err)
+		if machine.State != coretypes.MachineStateTerminating {
+			c.eventBus.PublishEvent(NewStateChangedMessage(coretypes.MachineStateTerminating))
 		}
-
-		if err := c.SetState(func(state *State) error {
-			state.Machine.RuntimePID = nil
-			return c.db.WithContext(ctx).Select("RuntimePID").Save(state.Machine).Error
-		}); err != nil {
-			return coretypes.MachineStateError, fmt.Errorf("failed to clear runtime PID: %w", err)
+		if err := c.terminateRuntime(ctx, machine); err != nil {
+			return coretypes.MachineStateError, fmt.Errorf("failed to terminate runtime: %w", err)
 		}
 	}
 
@@ -180,73 +175,46 @@ func (c *Controller) reconcileToTerminated(ctx context.Context, machine *types.M
 	return coretypes.MachineStateTerminated, nil
 }
 
-func (c *Controller) prepareResources(ctx context.Context, machine *types.Machine) error {
-	if err := c.prepareVolumes(ctx, machine); err != nil {
-		return fmt.Errorf("failed to prepare volumes: %w", err)
-	} else if err = c.prepareNetwork(ctx, machine); err != nil {
-		return fmt.Errorf("failed to prepare network: %w", err)
-	}
-	return nil
-}
-
-func (c *Controller) prepareVolumes(ctx context.Context, machine *types.Machine) error {
-	c.log.Debug("preparing volumes", slog.Int("containers", len(machine.Containers)))
-	containerVolumes := map[string]*types.MachineVolume{}
-	for _, volume := range machine.Volumes {
-		containerVolumes[volume.ContainerID] = volume
+func (c *Controller) prepareMachine(ctx context.Context, machine *types.Machine) error {
+	c.log.Debug("preparing machine", slog.Int("containers", len(machine.Containers)))
+	containersByID := map[string]*types.Container{}
+	for _, container := range machine.Containers {
+		containersByID[container.ID] = container
 	}
 
-	var volumesToCreate []*types.MachineVolume
-	for index, container := range machine.Containers {
-		if err := ctx.Err(); err != nil {
-			return err
-		} else if _, ok := containerVolumes[container.ID]; ok {
-			continue
+	p := pool.New().WithErrors().WithContext(ctx)
+	p.Go(func(ctx context.Context) error {
+		if err := c.prepareNetwork(ctx, machine); err != nil {
+			return fmt.Errorf("failed to prepare network: %w", err)
 		}
 
-		image, err := c.imageProvider.Fetch(ctx, types.ImageFetchOptions{
-			Image: container.Spec.Image,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to fetch image: %w", err)
-		}
-
-		volume, err := c.volumeProvider.Create(ctx, types.VolumeCreateOptions{
-			Size:   1024, // 1 gib
-			Source: image.Volume,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create machine container volume: %w", err)
-		}
-
-		volumesToCreate = append(volumesToCreate, &types.MachineVolume{
-			ID:          cuid2.Generate(),
-			Position:    index,
-			ContainerID: container.ID,
-			Container:   container,
-			MachineID:   machine.ID,
-			Machine:     machine,
-			ImageID:     &image.ID,
-			Image:       image,
-			VolumeID:    volume.ID,
-			Volume:      volume,
-			CreatedAt:   time.Now(),
-		})
-	}
-
-	if len(volumesToCreate) == 0 {
-		return nil
-	}
-
-	machine.Volumes = append(machine.Volumes, volumesToCreate...)
-	return c.SetState(func(state *State) error {
-		if err := c.db.WithContext(ctx).Save(&volumesToCreate).Error; err != nil {
-			return fmt.Errorf("failed to persist created volumes: %w", err)
-		}
-
-		state.Machine.Volumes = append(state.Machine.Volumes, volumesToCreate...)
 		return nil
 	})
+
+	for _, machineVolume := range machine.Volumes {
+		container := containersByID[machineVolume.ContainerID]
+		if container == nil {
+			return fmt.Errorf("container %s not found", machineVolume.ContainerID)
+		}
+
+		p.Go(func(ctx context.Context) error {
+			if machineVolume.Image != nil {
+				err := c.imageProvider.Pull(ctx, machineVolume.Image)
+				if err != nil {
+					return fmt.Errorf("failed to pull image: %w", err)
+				}
+			}
+
+			err := c.volumeProvider.Allocate(ctx, machineVolume.Volume)
+			if err != nil && !errors.Is(err, types.ErrVolumeAlreadyAllocated) {
+				return fmt.Errorf("failed to allocate volume (%v): %w", machineVolume.VolumeID, err)
+			}
+
+			return nil
+		})
+	}
+
+	return p.Wait()
 }
 
 func (c *Controller) prepareNetwork(ctx context.Context, machine *types.Machine) error {
@@ -273,6 +241,23 @@ func (c *Controller) prepareNetwork(ctx context.Context, machine *types.Machine)
 	})
 }
 
+func (c *Controller) terminateRuntime(ctx context.Context, machine *types.Machine) error {
+	c.log.Debug("terminating runtime", slog.Int("pid", *machine.RuntimePID))
+	if err := c.runtimeProvider.Terminate(ctx, machine.ID); err != nil {
+		return fmt.Errorf("failed to terminate runtime: %w", err)
+	}
+
+	err := c.SetState(func(state *State) error {
+		state.Machine.RuntimePID = nil
+		return c.db.WithContext(ctx).Select("RuntimePID").Save(state.Machine).Error
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update runtime PID: %w", err)
+	}
+
+	return nil
+}
+
 func (c *Controller) cleanupResources(ctx context.Context, machine *types.Machine) error {
 	if machine.NetworkInterface != nil {
 		if err := c.networkProvider.ReleaseInterface(ctx, machine.NetworkInterface.Name); err != nil {
@@ -280,28 +265,9 @@ func (c *Controller) cleanupResources(ctx context.Context, machine *types.Machin
 		}
 	}
 
-	for _, volume := range machine.Volumes {
-		if err := c.volumeProvider.Delete(ctx, volume.Volume); err != nil {
-			c.log.Error("failed to delete volume", slog.String("volume-id", volume.VolumeID), slog.Any("error", err))
-		}
-	}
-
-	return nil
-}
-
-func (c *Controller) cleanupErrorState(ctx context.Context, machine *types.Machine) error {
-	c.log.Debug("cleaning up error state")
-	if machine.RuntimePID != nil && *machine.RuntimePID > 0 {
-		if err := c.runtimeProvider.Terminate(ctx, machine.ID); err != nil {
-			return fmt.Errorf("failed to terminate runtime during cleanup: %w", err)
-		}
-
-		err := c.SetState(func(state *State) error {
-			state.Machine.RuntimePID = nil
-			return c.db.WithContext(ctx).Select("RuntimePID").Save(state.Machine).Error
-		})
-		if err != nil {
-			return fmt.Errorf("failed to set runtime pid: %w", err)
+	for _, machineVolume := range machine.Volumes {
+		if err := c.volumeProvider.Release(ctx, machineVolume.Volume); err != nil {
+			c.log.Error("failed to delete volume", slog.String("volume-id", machineVolume.VolumeID), slog.Any("error", err))
 		}
 	}
 

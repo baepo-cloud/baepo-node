@@ -15,6 +15,7 @@ type (
 		Spec      *ImageSpec
 		VolumeID  string
 		Volume    *Volume
+		PulledAt  *time.Time
 		CreatedAt time.Time
 	}
 
@@ -30,7 +31,9 @@ type (
 	}
 
 	ImageProvider interface {
-		Fetch(ctx context.Context, opts ImageFetchOptions) (*Image, error)
+		FetchDetails(ctx context.Context, opts ImageFetchOptions) (*Image, error)
+
+		Pull(ctx context.Context, image *Image) error
 	}
 )
 

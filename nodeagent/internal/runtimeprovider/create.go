@@ -25,9 +25,9 @@ func (p *Provider) Create(ctx context.Context, opts types.RuntimeCreateOptions) 
 	}
 
 	disksConfig := make([]chclient.DiskConfig, len(opts.Machine.Volumes))
-	for _, volume := range opts.Machine.Volumes {
-		disksConfig[volume.Position] = chclient.DiskConfig{
-			Path:      volume.Volume.Path,
+	for _, machineVolume := range opts.Machine.Volumes {
+		disksConfig[machineVolume.Position] = chclient.DiskConfig{
+			Path:      *machineVolume.Volume.Path,
 			Readonly:  typeutil.Ptr(false),
 			Direct:    typeutil.Ptr(true),
 			NumQueues: typeutil.Ptr(1),
