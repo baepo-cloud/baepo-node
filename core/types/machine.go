@@ -26,10 +26,10 @@ const (
 	MachineStateError       MachineState = "error"
 	MachineStateTerminating MachineState = "terminating"
 	MachineStateTerminated  MachineState = "terminated"
-	MachineStateUnknown     MachineState = "unknown"
+	MachineStateUnknown     MachineState = ""
 
 	MachineDesiredStatePending    MachineDesiredState = "pending"
 	MachineDesiredStateRunning    MachineDesiredState = "running"
 	MachineDesiredStateTerminated MachineDesiredState = "terminated"
-	MachineDesiredStateUnknown    MachineDesiredState = "unknown"
+	MachineDesiredStateUnknown    MachineDesiredState = ""
 )

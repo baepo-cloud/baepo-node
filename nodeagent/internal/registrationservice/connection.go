@@ -1,16 +1,17 @@
 package registrationservice
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"errors"
 	"fmt"
-	"github.com/baepo-cloud/baepo-node/core/v1pbadapter"
-	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
-	apiv1pb "github.com/baepo-cloud/baepo-proto/go/baepo/api/v1"
 	"io"
 	"log/slog"
 	"time"
+
+	"connectrpc.com/connect"
+	"github.com/baepo-cloud/baepo-node/core/v1pbadapter"
+	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
+	apiv1pb "github.com/baepo-cloud/baepo-proto/go/baepo/api/v1"
 )
 
 type (
@@ -41,9 +42,9 @@ func (s *Service) openConnection(ctx context.Context) error {
 	conn.log = s.log.With(slog.String("node-id", registration.NodeId))
 	conn.log.Info("node registration completed")
 
-	if err = conn.startMachineEventListener(ctx, registration.ExpectedMachines); err != nil {
+	if err = conn.startMachineEventListener(ctx); err != nil {
 		return fmt.Errorf("failed to start machine event listener: %w", err)
-	} else if err = s.syncMachines(ctx, registration.ExpectedMachines); err != nil {
+	} else if err = conn.syncMachines(ctx, registration.ExpectedMachines); err != nil {
 		return fmt.Errorf("failed to sync machines: %w", err)
 	}
 	return conn.dispatchLoop(ctx)
@@ -86,7 +87,7 @@ func (c *Connection) dispatchLoop(ctx context.Context) error {
 func (c *Connection) handleIncomingEvent(ctx context.Context, anyEvent *apiv1pb.NodeControllerServerEvent) error {
 	switch event := anyEvent.Event.(type) {
 	case *apiv1pb.NodeControllerServerEvent_CreateMachine:
-		return c.service.createMachine(ctx, event.CreateMachine)
+		return c.createMachine(ctx, event.CreateMachine)
 	case *apiv1pb.NodeControllerServerEvent_UpdateMachineDesiredState:
 		_, err := c.service.machineService.UpdateDesiredState(ctx, types.MachineUpdateDesiredStateOptions{
 			MachineID:    event.UpdateMachineDesiredState.MachineId,

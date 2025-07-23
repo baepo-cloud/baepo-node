@@ -9,7 +9,7 @@ import (
 func (s *Service) List(ctx context.Context) ([]*types.Machine, error) {
 	var machines []*types.Machine
 	s.machineControllers.ForEach(func(_ string, ctrl *machinecontroller.Controller) bool {
-		machines = append(machines, ctrl.GetMachine())
+		machines = append(machines, ctrl.GetState().Machine)
 		return true
 	})
 	return machines, nil
