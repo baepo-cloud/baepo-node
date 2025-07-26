@@ -29,10 +29,12 @@ func (c *Connection) startMachineEventListener(ctx context.Context) error {
 }
 
 func (c *Connection) syncMachines(ctx context.Context, machines []*apiv1pb.NodeControllerServerEvent_Machine) error {
-	c.log.Info("syncing machines")
+	c.log.Info("syncing machines", slog.Int("count", len(machines)))
+
+	// syncing expected machines
 	expectedMachines := map[string]bool{}
 	for _, spec := range machines {
-		machine, err := c.reconcileWithExpectedMachine(ctx, spec)
+		machine, err := c.syncMachineFromSpec(ctx, spec)
 		if err != nil {
 			return fmt.Errorf("failed to reconcile machine: %w", err)
 		}
@@ -40,6 +42,7 @@ func (c *Connection) syncMachines(ctx context.Context, machines []*apiv1pb.NodeC
 		expectedMachines[spec.MachineId] = machine != nil
 	}
 
+	// now, terminating machines that are not expected to be running
 	currentMachines, err := c.service.machineService.List(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to list machines: %w", err)
@@ -61,7 +64,7 @@ func (c *Connection) syncMachines(ctx context.Context, machines []*apiv1pb.NodeC
 	return nil
 }
 
-func (c *Connection) reconcileWithExpectedMachine(ctx context.Context, spec *apiv1pb.NodeControllerServerEvent_Machine) (*types.Machine, error) {
+func (c *Connection) syncMachineFromSpec(ctx context.Context, spec *apiv1pb.NodeControllerServerEvent_Machine) (*types.Machine, error) {
 	desiredState := v1pbadapter.ToMachineDesiredState(spec.DesiredState)
 	log := c.log.With(slog.String("machine-id", spec.MachineId), slog.Any("desired-state", desiredState))
 	machine, err := c.service.machineService.FindByID(ctx, spec.MachineId)
