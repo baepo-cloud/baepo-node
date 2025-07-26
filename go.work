@@ -6,4 +6,5 @@ use (
     ./initcontainer
     ./nodeagent
 	./nodeagentctl
+	./vmruntime
 )

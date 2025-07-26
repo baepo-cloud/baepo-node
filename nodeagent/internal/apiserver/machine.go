@@ -34,7 +34,35 @@ func (s *Server) GetMachine(ctx context.Context, req *connect.Request[nodev1pb.N
 	}), nil
 }
 
-func (s *Server) GetMachineLogs(ctx context.Context, req *connect.Request[nodev1pb.NodeGetMachineLogsRequest], writeStream *connect.ServerStream[nodev1pb.NodeGetMachineLogsResponse]) error {
+func (s *Server) GetMachineLogs(ctx context.Context, req *connect.Request[nodev1pb.NodeGetMachineLogsRequest], stream *connect.ServerStream[nodev1pb.NodeGetMachineLogsResponse]) error {
+	logs, err := s.machineService.GetMachineLogs(ctx, types.MachineGetMachineLogsOptions{
+		MachineID: req.Msg.MachineId,
+		Follow:    req.Msg.Follow,
+	})
+	if err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case log, ok := <-logs:
+			if !ok {
+				return nil
+			}
+
+			err = stream.Send(&nodev1pb.NodeGetMachineLogsResponse{
+				Content: log.Content,
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func (s *Server) GetContainerLogs(ctx context.Context, c *connect.Request[nodev1pb.NodeGetContainerLogsRequest], c2 *connect.ServerStream[nodev1pb.NodeGetContainerLogsResponse]) error {
 	//machine, err := s.machineService.FindByID(ctx, req.Msg.MachineId)
 	//if err != nil {
 	//	return err
@@ -63,13 +91,7 @@ func (s *Server) GetMachineLogs(ctx context.Context, req *connect.Request[nodev1
 	//		return err
 	//	}
 	//}
-
 	return nil
-}
-
-func (s *Server) GetContainerLogs(ctx context.Context, c *connect.Request[nodev1pb.NodeGetContainerLogsRequest], c2 *connect.ServerStream[nodev1pb.NodeGetContainerLogsResponse]) error {
-	//TODO implement me
-	panic("implement me")
 }
 
 func (s *Server) adaptMachine(machine *types.Machine) *nodev1pb.Machine {

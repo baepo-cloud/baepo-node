@@ -56,6 +56,10 @@ type (
 		CreatedAt   time.Time
 	}
 
+	MachineLog struct {
+		Content []byte
+	}
+
 	MachineCreateOptions struct {
 		MachineID    string
 		DesiredState coretypes.MachineDesiredState
@@ -73,6 +77,11 @@ type (
 		DesiredState coretypes.MachineDesiredState
 	}
 
+	MachineGetMachineLogsOptions struct {
+		MachineID string
+		Follow    bool
+	}
+
 	MachineService interface {
 		List(ctx context.Context) ([]*Machine, error)
 
@@ -85,6 +94,8 @@ type (
 		ListEvents(ctx context.Context, machineID string) ([]*MachineEvent, error)
 
 		SubscribeToEvents(ctx context.Context) <-chan *MachineEvent
+
+		GetMachineLogs(ctx context.Context, opts MachineGetMachineLogsOptions) (<-chan MachineLog, error)
 	}
 )
 

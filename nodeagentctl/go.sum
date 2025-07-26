@@ -6,6 +6,8 @@ github.com/baepo-cloud/baepo-proto/go v0.0.0-20250517105736-a90dd89a72ed h1:ejx8
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250517105736-a90dd89a72ed/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250603063731-92a2a28476d8 h1:IGVnX1NXTeMdFAObclxrwfTATXt5p27FVVOjvovomig=
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250603063731-92a2a28476d8/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
+github.com/baepo-cloud/baepo-proto/go v0.0.0-20250726152625-6d5dc77f67d9 h1:4Ax6mNGtqXdgSvSRtr7TVNncifXgADALcpidVcDn49Q=
+github.com/baepo-cloud/baepo-proto/go v0.0.0-20250726152625-6d5dc77f67d9/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
 github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
