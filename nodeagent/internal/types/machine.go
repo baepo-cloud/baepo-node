@@ -17,7 +17,6 @@ type (
 		ID                 string `gorm:"primaryKey"`
 		State              coretypes.MachineState
 		DesiredState       coretypes.MachineDesiredState
-		RuntimePID         *int `gorm:"column:runtime_pid"`
 		Spec               *MachineSpec
 		NetworkInterfaceID *string
 		Volumes            []*MachineVolume

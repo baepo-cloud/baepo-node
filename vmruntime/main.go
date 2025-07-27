@@ -21,11 +21,11 @@ func main() {
 	}
 
 	r := runtime.New(&runtime.Config{
-		RuntimeConfig:             *config,
-		InitBinaryPath:            os.Getenv("VMRUNTIME_INIT_BINARY_PATH"),
-		InitContainerBinaryPath:   os.Getenv("VMRUNTIME_INIT_CONTAINER_BINARY_PATH"),
-		CloudHypervisorBinaryPath: os.Getenv("VMRUNTIME_CLOUD_HYPERVISOR_BINARY_PATH"),
-		VMLinuxPath:               os.Getenv("VMRUNTIME_VM_LINUX_PATH"),
+		RuntimeConfig:         *config,
+		InitBinary:            os.Getenv("VMRUNTIME_INIT_BINARY"),
+		InitContainerBinary:   os.Getenv("VMRUNTIME_INIT_CONTAINER_BINARY"),
+		CloudHypervisorBinary: os.Getenv("VMRUNTIME_CLOUD_HYPERVISOR_BINARY"),
+		VMLinux:               os.Getenv("VMRUNTIME_VM_LINUX"),
 	})
 	if err = r.Start(context.Background()); err != nil {
 		panic(err)

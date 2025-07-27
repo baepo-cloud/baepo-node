@@ -6,19 +6,15 @@ import (
 )
 
 type (
-	RuntimeCreateOptions struct {
+	RuntimeStartOptions struct {
 		Machine *Machine
 	}
 
-	RuntimeProvider interface {
-		GC(ctx context.Context, getExpectedMachineIDs func() []string) error
-
-		Create(ctx context.Context, opts RuntimeCreateOptions) (int, error)
-
-		Boot(ctx context.Context, machineID string) error
+	RuntimeService interface {
+		Start(ctx context.Context, opts RuntimeStartOptions) error
 
 		Terminate(ctx context.Context, machineID string) error
 
-		NewInitClient(machineID string) (nodev1pbconnect.InitClient, func())
+		GetClient(machineID string) (nodev1pbconnect.RuntimeClient, func())
 	}
 )

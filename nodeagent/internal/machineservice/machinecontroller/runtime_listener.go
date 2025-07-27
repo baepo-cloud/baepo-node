@@ -12,23 +12,23 @@ import (
 	"time"
 )
 
-type InitListener struct {
+type RuntimeListener struct {
 	Cancel                context.CancelFunc
 	ConsecutiveErrorCount int
 }
 
-func (c *Controller) shouldStartInitListener(machine *types.Machine) bool {
+func (c *Controller) shouldStartRuntimeListener(machine *types.Machine) bool {
 	return typeutil.Includes([]coretypes.MachineState{
 		coretypes.MachineStateRunning,
 		coretypes.MachineStateDegraded,
 	}, machine.State)
 }
 
-func (c *Controller) startInitListener(machine *types.Machine) {
-	c.log.Debug("start init listener")
+func (c *Controller) startRuntimeListener(machine *types.Machine) {
+	c.log.Debug("starting runtime listener")
 	ctx, cancel := context.WithCancel(context.Background())
 	_ = c.SetState(func(state *State) error {
-		state.InitListener = &InitListener{
+		state.RuntimeListener = &RuntimeListener{
 			Cancel:                cancel,
 			ConsecutiveErrorCount: 0,
 		}
@@ -45,14 +45,14 @@ func (c *Controller) startInitListener(machine *types.Machine) {
 			select {
 			case <-ctx.Done():
 				_ = c.SetState(func(state *State) error {
-					state.InitListener = nil
+					state.RuntimeListener = nil
 					return nil
 				})
 				return
 			case <-ticker.C:
-				err := c.connectToInitListener(ctx, machine.ID)
-				c.eventBus.PublishEvent(&InitListenerDisconnectedMessage{Error: err})
-				c.log.Debug("init listener disconnected", slog.Any("error", err))
+				err := c.connectToRuntimeListener(ctx, machine.ID)
+				c.eventBus.PublishEvent(&RuntimeListenerDisconnectedMessage{Error: err})
+				c.log.Debug("runtime listener disconnected", slog.Any("error", err))
 				if err != nil {
 					ticker.Reset(time.Second)
 				}
@@ -61,8 +61,8 @@ func (c *Controller) startInitListener(machine *types.Machine) {
 	}()
 }
 
-func (c *Controller) connectToInitListener(ctx context.Context, machineID string) error {
-	client, closeClient := c.runtimeProvider.NewInitClient(machineID)
+func (c *Controller) connectToRuntimeListener(ctx context.Context, machineID string) error {
+	client, closeClient := c.runtimeService.GetClient(machineID)
 	defer closeClient()
 
 	stream, err := client.Events(ctx, connect.NewRequest(&emptypb.Empty{}))
@@ -73,13 +73,13 @@ func (c *Controller) connectToInitListener(ctx context.Context, machineID string
 	hasReceived := false
 	for stream.Receive() {
 		if !hasReceived {
-			c.eventBus.PublishEvent(&InitListenerConnectedMessage{})
+			c.eventBus.PublishEvent(&RuntimeListenerConnectedMessage{})
 			hasReceived = true
 		}
 
 		msg := stream.Msg()
-		if event, ok := msg.Event.(*nodev1pb.InitEventsResponse_ContainerStateChanged); ok {
-			c.eventBus.PublishEvent(&InitContainerStateChangedMessage{
+		if event, ok := msg.Event.(*nodev1pb.RuntimeEventsResponse_ContainerStateChanged); ok {
+			c.eventBus.PublishEvent(&ContainerStateChangedMessage{
 				EventID:   msg.EventId,
 				Event:     event.ContainerStateChanged,
 				Timestamp: msg.Timestamp.AsTime(),

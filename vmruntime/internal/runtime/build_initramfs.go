@@ -50,14 +50,14 @@ func (r *Runtime) buildInitRamFS(ctx context.Context) error {
 	}
 
 	initPath := path.Join(tmpDir, "init")
-	if err = copyFile(r.config.InitBinaryPath, initPath); err != nil {
+	if err = copyFile(r.config.InitBinary, initPath); err != nil {
 		return fmt.Errorf("failed to copy init binary: %w", err)
 	} else if err = os.Chmod(initPath, 0755); err != nil {
 		return fmt.Errorf("failed to make init binary executable: %w", err)
 	}
 
 	initContainerPath := path.Join(tmpDir, "initcontainer")
-	if err = copyFile(r.config.InitContainerBinaryPath, initContainerPath); err != nil {
+	if err = copyFile(r.config.InitContainerBinary, initContainerPath); err != nil {
 		return fmt.Errorf("failed to copy initcontainer binary: %w", err)
 	} else if err = os.Chmod(initContainerPath, 0755); err != nil {
 		return fmt.Errorf("failed to make initcontainer binary executable: %w", err)

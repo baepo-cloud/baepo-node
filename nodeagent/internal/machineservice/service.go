@@ -17,7 +17,7 @@ type Service struct {
 	db                    *gorm.DB
 	volumeProvider        types.VolumeProvider
 	networkProvider       types.NetworkProvider
-	runtimeProvider       types.RuntimeProvider
+	runtimeService        types.RuntimeService
 	imageProvider         types.ImageProvider
 	config                *types.Config
 	cancelGCWorker        context.CancelFunc
@@ -32,7 +32,7 @@ func New(
 	db *gorm.DB,
 	volumeProvider types.VolumeProvider,
 	networkProvider types.NetworkProvider,
-	runtimeProvider types.RuntimeProvider,
+	runtimeService types.RuntimeService,
 	imageProvider types.ImageProvider,
 	config *types.Config,
 ) *Service {
@@ -41,7 +41,7 @@ func New(
 		db:                 db,
 		volumeProvider:     volumeProvider,
 		networkProvider:    networkProvider,
-		runtimeProvider:    runtimeProvider,
+		runtimeService:     runtimeService,
 		imageProvider:      imageProvider,
 		config:             config,
 		machineControllers: haxmap.New[string, *machinecontroller.Controller](),
@@ -98,7 +98,7 @@ func (s *Service) loadMachines(ctx context.Context) error {
 }
 
 func (s *Service) newMachineController(machine *types.Machine) *machinecontroller.Controller {
-	ctrl := machinecontroller.New(machine, s.db, s.volumeProvider, s.networkProvider, s.runtimeProvider,
+	ctrl := machinecontroller.New(machine, s.db, s.volumeProvider, s.networkProvider, s.runtimeService,
 		s.imageProvider)
 	ctrl.SubscribeToEvents(s.newMachineEventsHandler(machine))
 	return ctrl

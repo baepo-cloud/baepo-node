@@ -25,15 +25,15 @@ type (
 		Error   error
 	}
 
-	InitContainerStateChangedMessage struct {
+	ContainerStateChangedMessage struct {
 		EventID   string
-		Event     *nodev1pb.InitEventsResponse_ContainerStateChangedEvent
+		Event     *nodev1pb.RuntimeEventsResponse_ContainerStateChangedEvent
 		Timestamp time.Time
 	}
 
-	InitListenerConnectedMessage struct{}
+	RuntimeListenerConnectedMessage struct{}
 
-	InitListenerDisconnectedMessage struct {
+	RuntimeListenerDisconnectedMessage struct {
 		Error error
 	}
 )

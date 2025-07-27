@@ -55,7 +55,7 @@ func (s *Service) newMachineEventsHandler(machine *types.Machine) func(context.C
 					},
 				},
 			}
-		case *machinecontroller.InitContainerStateChangedMessage:
+		case *machinecontroller.ContainerStateChangedMessage:
 			var container *types.Container
 			for _, current := range machine.Containers {
 				if current.ID == event.Event.ContainerId {

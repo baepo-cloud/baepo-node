@@ -12,7 +12,7 @@ import (
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/machineservice"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/networkprovider"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/registrationservice"
-	"github.com/baepo-cloud/baepo-node/nodeagent/internal/runtimeprovider"
+	"github.com/baepo-cloud/baepo-node/nodeagent/internal/runtimeservice"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/volumeprovider"
 	"github.com/baepo-cloud/baepo-proto/go/baepo/api/v1/apiv1pbconnect"
@@ -39,7 +39,7 @@ func main() {
 		fx.Provide(provideGORM),
 		fx.Provide(fx.Annotate(networkprovider.New, fx.As(new(types.NetworkProvider)))),
 		fx.Provide(fx.Annotate(imageprovider.New, fx.As(new(types.ImageProvider)))),
-		fx.Provide(fx.Annotate(runtimeprovider.New, fx.As(new(types.RuntimeProvider)))),
+		fx.Provide(fx.Annotate(runtimeservice.New, fx.As(new(types.RuntimeService)))),
 		fx.Provide(fx.Annotate(volumeprovider.New, fx.As(new(types.VolumeProvider)))),
 		fx.Provide(provideControlPlaneApiClient),
 		fx.Provide(machineservice.New),
@@ -93,18 +93,15 @@ func main() {
 
 func provideConfig() (*types.Config, error) {
 	config := types.Config{
-		ClusterID:             os.Getenv("NODE_CLUSTER_ID"),
-		BootstrapToken:        os.Getenv("NODE_BOOTSTRAP_TOKEN"),
-		IPAddr:                os.Getenv("NODE_IP_ADDR"),
-		APIAddr:               os.Getenv("NODE_API_ADDR"),
-		GatewayAddr:           os.Getenv("NODE_GATEWAY_ADDR"),
-		StorageDirectory:      os.Getenv("NODE_STORAGE_DIRECTORY"),
-		InitBinary:            os.Getenv("NODE_INIT_BINARY"),
-		InitContainerBinary:   os.Getenv("NODE_INIT_CONTAINER_BINARY"),
-		VMLinux:               os.Getenv("NODE_VM_LINUX"),
-		CloudHypervisorBinary: os.Getenv("NODE_CLOUD_HYPERVISOR_BINARY"),
-		VolumeGroup:           os.Getenv("NODE_VOLUME_GROUP"),
-		ControlPlaneURL:       os.Getenv("NODE_CONTROL_PLANE_URL"),
+		ClusterID:        os.Getenv("NODE_CLUSTER_ID"),
+		BootstrapToken:   os.Getenv("NODE_BOOTSTRAP_TOKEN"),
+		IPAddr:           os.Getenv("NODE_IP_ADDR"),
+		APIAddr:          os.Getenv("NODE_API_ADDR"),
+		GatewayAddr:      os.Getenv("NODE_GATEWAY_ADDR"),
+		StorageDirectory: os.Getenv("NODE_STORAGE_DIRECTORY"),
+		RuntimeBinary:    os.Getenv("NODE_RUNTIME_BINARY"),
+		VolumeGroup:      os.Getenv("NODE_VOLUME_GROUP"),
+		ControlPlaneURL:  os.Getenv("NODE_CONTROL_PLANE_URL"),
 	}
 	if config.APIAddr == "" {
 		config.APIAddr = ":3443"
@@ -114,18 +111,6 @@ func provideConfig() (*types.Config, error) {
 	}
 	if config.StorageDirectory == "" {
 		config.StorageDirectory = "/var/lib/baepo"
-	}
-	if config.InitBinary == "" {
-		config.InitBinary = "./resources/baepo-init"
-	}
-	if config.InitContainerBinary == "" {
-		config.InitContainerBinary = "./resources/baepo-initcontainer"
-	}
-	if config.VMLinux == "" {
-		config.VMLinux = "./resources/vmlinux"
-	}
-	if config.CloudHypervisorBinary == "" {
-		config.CloudHypervisorBinary = "./resources/cloud-hypervisor"
 	}
 	if config.VolumeGroup == "" {
 		config.VolumeGroup = "vg_baepo"
@@ -139,12 +124,8 @@ func provideConfig() (*types.Config, error) {
 	if config.BootstrapToken == "" {
 		return nil, errors.New("NODE_BOOTSTRAP_TOKEN env variable required")
 	}
-	if !filepath.IsAbs(config.InitBinary) {
-		absPath, err := filepath.Abs(config.InitBinary)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get absolute path of init binary: %w", err)
-		}
-		config.InitBinary = absPath
+	if config.RuntimeBinary == "" {
+		return nil, errors.New("NODE_RUNTIME_BINARY env variable required")
 	}
 	if !filepath.IsAbs(config.StorageDirectory) {
 		absPath, err := filepath.Abs(config.StorageDirectory)

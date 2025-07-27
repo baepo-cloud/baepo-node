@@ -2,12 +2,14 @@ package runtime
 
 import (
 	"context"
+	"fmt"
 	coretypes "github.com/baepo-cloud/baepo-node/core/types"
 	"github.com/baepo-cloud/baepo-node/core/vsock"
 	"github.com/baepo-cloud/baepo-node/vmruntime/internal/chclient"
 	"github.com/baepo-cloud/baepo-proto/go/baepo/node/v1/nodev1pbconnect"
 	"net"
 	"net/http"
+	"os/exec"
 	"path"
 	"time"
 )
@@ -15,16 +17,17 @@ import (
 type (
 	Config struct {
 		coretypes.RuntimeConfig
-		InitBinaryPath            string
-		InitContainerBinaryPath   string
-		CloudHypervisorBinaryPath string
-		VMLinuxPath               string
+		InitBinary            string
+		InitContainerBinary   string
+		CloudHypervisorBinary string
+		VMLinux               string
 	}
 
 	Runtime struct {
-		config    *Config
-		vmmClient *chclient.ClientWithResponses
-		vmmPID    *int
+		config     *Config
+		vmmClient  *chclient.ClientWithResponses
+		vmmCmd     *exec.Cmd
+		httpServer *http.Server
 	}
 )
 
@@ -46,6 +49,36 @@ func New(config *Config) *Runtime {
 
 	runtime.vmmClient = vmmClient
 	return runtime
+}
+
+func (r *Runtime) Start(ctx context.Context) error {
+	if err := r.startConnectServer(); err != nil {
+		return err
+	}
+
+	if err := r.buildInitRamFS(ctx); err != nil {
+		return err
+	} else if err = r.startHypervisor(ctx); err != nil {
+		return err
+	} else if err = r.createVM(ctx); err != nil {
+		return err
+	} else if err = r.bootVM(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Runtime) Stop(ctx context.Context) error {
+	if err := r.terminateVM(ctx); err != nil {
+		return fmt.Errorf("failed to terminate vm: %w", err)
+	}
+
+	if r.httpServer != nil {
+		r.httpServer.Shutdown(ctx)
+	}
+
+	return nil
 }
 
 func (r *Runtime) newInitClient() (nodev1pbconnect.InitClient, func()) {

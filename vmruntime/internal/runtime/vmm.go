@@ -14,15 +14,8 @@ import (
 )
 
 func (r *Runtime) startHypervisor(ctx context.Context) error {
-	if r.vmmPID != nil {
-		return nil
-	}
-
-	cmd := exec.Command(r.config.CloudHypervisorBinaryPath, "--api-socket", r.getHypervisorSocketPath())
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
-	}
-	if err := cmd.Start(); err != nil {
+	r.vmmCmd = exec.Command(r.config.CloudHypervisorBinary, "--api-socket", r.getHypervisorSocketPath())
+	if err := r.vmmCmd.Start(); err != nil {
 		return fmt.Errorf("failed to start cloud hypervisor: %w", err)
 	}
 
@@ -31,14 +24,12 @@ func (r *Runtime) startHypervisor(ctx context.Context) error {
 		if err == nil && res.StatusCode() == http.StatusOK {
 			break
 		} else if retry >= 10 {
-			_ = syscall.Kill(cmd.Process.Pid, syscall.SIGKILL)
+			_ = syscall.Kill(r.vmmCmd.Process.Pid, syscall.SIGKILL)
 			_ = os.Remove(r.getHypervisorSocketPath())
 			return err
 		}
 		time.Sleep(100 * time.Microsecond)
 	}
-
-	r.vmmPID = &cmd.Process.Pid
 	return nil
 }
 
@@ -80,7 +71,7 @@ func (r *Runtime) createVM(ctx context.Context) error {
 			File: typeutil.Ptr(r.getHypervisorLogPath()),
 		},
 		Payload: chclient.PayloadConfig{
-			Kernel:    typeutil.Ptr(r.config.VMLinuxPath),
+			Kernel:    typeutil.Ptr(r.config.VMLinux),
 			Initramfs: typeutil.Ptr(r.getInitRamFSPath()),
 			Cmdline:   typeutil.Ptr("console=ttyS0 console=hvc0 root=/dev/vda rw rdinit=/init"),
 		},
@@ -121,7 +112,10 @@ func (r *Runtime) terminateVM(ctx context.Context) error {
 		}
 	}
 
+	if r.vmmCmd != nil && r.vmmCmd.Process != nil {
+		_ = syscall.Kill(r.vmmCmd.Process.Pid, syscall.SIGKILL)
+	}
+	_ = os.Remove(r.getHypervisorSocketPath())
 	_ = os.Remove(r.getInitRamFSPath())
-	r.vmmPID = nil
 	return nil
 }

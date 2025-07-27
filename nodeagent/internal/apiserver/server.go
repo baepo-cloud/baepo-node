@@ -20,7 +20,6 @@ import (
 type Server struct {
 	registrationService types.RegistrationService
 	machineService      types.MachineService
-	runtimeProvider     types.RuntimeProvider
 	config              *types.Config
 	httpServer          *http.Server
 }
@@ -30,13 +29,11 @@ var _ nodev1pbconnect.NodeServiceHandler = (*Server)(nil)
 func New(
 	registrationService types.RegistrationService,
 	machineService types.MachineService,
-	runtimeProvider types.RuntimeProvider,
 	config *types.Config,
 ) *Server {
 	return &Server{
 		registrationService: registrationService,
 		machineService:      machineService,
-		runtimeProvider:     runtimeProvider,
 		config:              config,
 	}
 }
@@ -101,7 +98,6 @@ func (s *Server) newLoggerUnaryInterceptor() connect.UnaryInterceptorFunc {
 
 			canonicallog.LogDuration(logContext, time.Now().Sub(startedAt))
 			canonicallog.PrintLine(logContext, "api-request")
-
 			return res, err
 		}
 	}
