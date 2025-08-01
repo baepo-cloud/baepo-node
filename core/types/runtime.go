@@ -15,7 +15,7 @@ type (
 	RuntimeNetworkConfig struct {
 		InterfaceName  string
 		IPAddress      net.IP
-		MacAddress     net.HardwareAddr
+		MacAddress     string
 		GatewayAddress net.IP
 		NetworkCIDR    net.IPNet
 		Hostname       string

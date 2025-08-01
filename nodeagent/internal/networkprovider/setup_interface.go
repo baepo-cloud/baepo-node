@@ -9,6 +9,12 @@ import (
 )
 
 func (p *Provider) SetupInterface(ctx context.Context, networkInterface *types.NetworkInterface) error {
+	if link, err := netlink.LinkByName(networkInterface.Name); err == nil {
+		if err = netlink.LinkDel(link); err != nil {
+			return fmt.Errorf("failed to delete existing tap interface %s: %w", networkInterface.Name, err)
+		}
+	}
+
 	tap := &netlink.Tuntap{
 		LinkAttrs: netlink.LinkAttrs{
 			Name: networkInterface.Name,

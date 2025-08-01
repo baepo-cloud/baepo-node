@@ -39,8 +39,9 @@ func (s *Service) Start(ctx context.Context, opts types.RuntimeStartOptions) err
 		return fmt.Errorf("failed to start runtime: %w", err)
 	}
 
-	go pipeToLogger(stdoutPipe, slog.Default(), slog.LevelDebug, "stdout")
-	go pipeToLogger(stderrPipe, slog.Default(), slog.LevelDebug, "stderr")
+	log := s.log.With(slog.String("machine-id", opts.Machine.ID))
+	go pipeToLogger(stdoutPipe, log, slog.LevelDebug, "stdout")
+	go pipeToLogger(stderrPipe, log, slog.LevelDebug, "stderr")
 
 	return nil
 }
@@ -57,7 +58,8 @@ func (s *Service) createRuntimeConfigFile(opts types.RuntimeStartOptions) error 
 		Network: coretypes.RuntimeNetworkConfig{
 			InterfaceName:  opts.Machine.NetworkInterface.Name,
 			IPAddress:      opts.Machine.NetworkInterface.IPAddress,
-			MacAddress:     opts.Machine.NetworkInterface.MacAddress,
+			MacAddress:     opts.Machine.NetworkInterface.MacAddress.String(),
+			NetworkCIDR:    opts.Machine.NetworkInterface.NetworkCIDR.ToNetIPNet(),
 			GatewayAddress: opts.Machine.NetworkInterface.GatewayAddress,
 			Hostname:       opts.Machine.ID,
 		},

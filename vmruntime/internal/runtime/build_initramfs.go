@@ -25,7 +25,7 @@ func (r *Runtime) buildInitRamFS(ctx context.Context) error {
 	maskSize, _ := r.config.Network.NetworkCIDR.Mask.Size()
 	initConfig := coretypes.InitConfig{
 		IPAddress:      fmt.Sprintf("%s/%d", r.config.Network.IPAddress.String(), maskSize),
-		MacAddress:     r.config.Network.MacAddress.String(),
+		MacAddress:     r.config.Network.MacAddress,
 		GatewayAddress: r.config.Network.GatewayAddress.String(),
 		Hostname:       r.config.MachineID,
 		Containers:     make([]coretypes.InitContainerConfig, len(r.config.Containers)),

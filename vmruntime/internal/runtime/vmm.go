@@ -57,7 +57,7 @@ func (r *Runtime) createVM(ctx context.Context) error {
 		Net: &[]chclient.NetConfig{
 			{
 				Tap:       &r.config.Network.InterfaceName,
-				Mac:       typeutil.Ptr(r.config.Network.MacAddress.String()),
+				Mac:       typeutil.Ptr(r.config.Network.MacAddress),
 				NumQueues: typeutil.Ptr(2),
 				QueueSize: typeutil.Ptr(256),
 			},

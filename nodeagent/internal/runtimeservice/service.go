@@ -2,11 +2,13 @@ package runtimeservice
 
 import (
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
+	"log/slog"
 	"path"
 )
 
 type Service struct {
 	config *types.Config
+	log    *slog.Logger
 }
 
 var _ types.RuntimeService = (*Service)(nil)
@@ -14,6 +16,7 @@ var _ types.RuntimeService = (*Service)(nil)
 func New(config *types.Config) *Service {
 	return &Service{
 		config: config,
+		log:    slog.With(slog.String("component", "runtimeservice")),
 	}
 }
 

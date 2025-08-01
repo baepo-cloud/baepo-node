@@ -26,7 +26,7 @@ func (s *Service) GetClient(machineID string) (nodev1pbconnect.RuntimeClient, fu
 			ResponseHeaderTimeout: 5 * time.Second,
 		},
 	}
-	return nodev1pbconnect.NewRuntimeClient(httpClient, "http://init"), func() {
+	return nodev1pbconnect.NewRuntimeClient(httpClient, "http://runtime"), func() {
 		for _, conn := range conns {
 			_ = conn.Close()
 		}

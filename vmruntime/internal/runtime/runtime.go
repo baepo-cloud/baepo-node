@@ -66,7 +66,7 @@ func (r *Runtime) Start(ctx context.Context) error {
 		return err
 	}
 
-	return nil
+	return r.vmmCmd.Wait()
 }
 
 func (r *Runtime) Stop(ctx context.Context) error {
