@@ -40,6 +40,7 @@ func (h *connectHandler) GetState(ctx context.Context, req *connect.Request[empt
 	res, _ := h.runtime.vmmClient.GetVmInfoWithResponse(ctx)
 
 	return connect.NewResponse(&nodev1pb.RuntimeGetStateResponse{
+		Pid:     int64(os.Getpid()),
 		Running: res != nil && res.JSON200 != nil && res.JSON200.State == chclient.Running,
 	}), nil
 }
@@ -76,10 +77,6 @@ func (h *connectHandler) Events(ctx context.Context, req *connect.Request[emptyp
 			}
 		}
 	}
-}
-
-func (h *connectHandler) Terminate(ctx context.Context, req *connect.Request[emptypb.Empty]) (*connect.Response[emptypb.Empty], error) {
-	return connect.NewResponse(&emptypb.Empty{}), h.runtime.Stop(ctx)
 }
 
 func (h *connectHandler) mapInitEvent(baseEvent *nodev1pb.InitEventsResponse) *nodev1pb.RuntimeEventsResponse {

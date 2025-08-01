@@ -98,14 +98,23 @@ func (r *Runtime) bootVM(ctx context.Context) error {
 }
 
 func (r *Runtime) terminateVM(ctx context.Context) error {
-	_, err := r.vmmClient.DeleteVM(ctx)
+	_, err := r.vmmClient.ShutdownVMWithResponse(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to send shutdown signal to VM: %w", err)
+	}
+
+	_, err = r.vmmClient.DeleteVM(ctx)
 	if err != nil {
 		if !strings.Contains(err.Error(), "connect: no such file or directory") {
 			return fmt.Errorf("failed to delete vm: %w", err)
 		}
 	}
 
-	_, err = r.vmmClient.ShutdownVMMWithResponse(ctx)
+	return nil
+}
+
+func (r *Runtime) stopHypervisor(ctx context.Context) error {
+	_, err := r.vmmClient.ShutdownVMMWithResponse(ctx)
 	if err != nil {
 		if !strings.Contains(err.Error(), "connect: no such file or directory") {
 			return fmt.Errorf("failed to shutdown vmm: %w", err)

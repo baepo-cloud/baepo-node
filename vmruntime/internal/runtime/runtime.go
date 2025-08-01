@@ -70,15 +70,21 @@ func (r *Runtime) Start(ctx context.Context) error {
 }
 
 func (r *Runtime) Stop(ctx context.Context) error {
-	if err := r.terminateVM(ctx); err != nil {
-		return fmt.Errorf("failed to terminate vm: %w", err)
-	}
-
 	if r.httpServer != nil {
 		r.httpServer.Shutdown(ctx)
 	}
 
+	if err := r.terminateVM(ctx); err != nil {
+		return fmt.Errorf("failed to terminate vm: %w", err)
+	} else if err = r.stopHypervisor(ctx); err != nil {
+		return fmt.Errorf("failed to stop hypervisor: %w", err)
+	}
+
 	return nil
+}
+
+func (r *Runtime) ForceStop(ctx context.Context) error {
+	return r.stopHypervisor(ctx)
 }
 
 func (r *Runtime) newInitClient() (nodev1pbconnect.InitClient, func()) {
