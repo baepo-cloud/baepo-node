@@ -19,11 +19,11 @@ func (c *Controller) eventHandler(ctx context.Context, anyEvent any) {
 		if c.shouldReconcile(state.Machine) {
 			c.reconcile()
 		}
-		shouldStartInitListener := c.shouldStartInitListener(state.Machine)
-		if shouldStartInitListener && state.InitListener == nil {
-			c.startInitListener(state.Machine)
-		} else if !shouldStartInitListener && state.InitListener != nil {
-			state.InitListener.Cancel()
+		shouldStartRuntimeListener := c.shouldStartRuntimeListener(state.Machine)
+		if shouldStartRuntimeListener && state.RuntimeListener == nil {
+			c.startRuntimeListener(state.Machine)
+		} else if !shouldStartRuntimeListener && state.RuntimeListener != nil {
+			state.RuntimeListener.Cancel()
 		}
 	case *DesiredStateChangedMessage:
 		c.log.Debug("desired state changed", slog.String("new-state", string(event.DesiredState)))
@@ -43,29 +43,29 @@ func (c *Controller) eventHandler(ctx context.Context, anyEvent any) {
 			return c.db.WithContext(ctx).Select("State", "TerminatedAt").Save(&s.Machine).Error
 		})
 		c.eventBus.PublishEvent(&AssessStateMessage{})
-	case *InitListenerConnectedMessage:
+	case *RuntimeListenerConnectedMessage:
 		if state := c.GetState(); state.Machine.State != coretypes.MachineStateRunning {
 			c.eventBus.PublishEvent(NewStateChangedMessage(coretypes.MachineStateRunning))
 		}
 		_ = c.SetState(func(s *State) error {
-			s.InitListener.ConsecutiveErrorCount = 0
+			s.RuntimeListener.ConsecutiveErrorCount = 0
 			return nil
 		})
-	case *InitListenerDisconnectedMessage:
+	case *RuntimeListenerDisconnectedMessage:
 		_ = c.SetState(func(s *State) error {
-			if s.InitListener != nil {
-				s.InitListener.ConsecutiveErrorCount++
+			if s.RuntimeListener != nil {
+				s.RuntimeListener.ConsecutiveErrorCount++
 			}
 			return nil
 		})
 		state := c.GetState()
-		if state.InitListener == nil {
+		if state.RuntimeListener == nil {
 			return
 		}
 
-		if state.InitListener.ConsecutiveErrorCount == 3 {
+		if state.RuntimeListener.ConsecutiveErrorCount == 3 {
 			c.eventBus.PublishEvent(NewStateChangedMessage(coretypes.MachineStateError))
-		} else if state.InitListener.ConsecutiveErrorCount == 1 {
+		} else if state.RuntimeListener.ConsecutiveErrorCount == 1 {
 			c.eventBus.PublishEvent(NewStateChangedMessage(coretypes.MachineStateDegraded))
 		}
 	}

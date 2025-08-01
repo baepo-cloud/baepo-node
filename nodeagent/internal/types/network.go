@@ -54,3 +54,7 @@ func (v *GormNetIPNet) Value() (driver.Value, error) {
 	ipNet := net.IPNet(*v)
 	return ipNet.String(), nil
 }
+
+func (v *GormNetIPNet) ToNetIPNet() net.IPNet {
+	return net.IPNet(*v)
+}

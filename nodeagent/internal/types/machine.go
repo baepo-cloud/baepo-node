@@ -17,7 +17,6 @@ type (
 		ID                 string `gorm:"primaryKey"`
 		State              coretypes.MachineState
 		DesiredState       coretypes.MachineDesiredState
-		RuntimePID         *int `gorm:"column:runtime_pid"`
 		Spec               *MachineSpec
 		NetworkInterfaceID *string
 		Volumes            []*MachineVolume
@@ -56,6 +55,10 @@ type (
 		CreatedAt   time.Time
 	}
 
+	MachineLog struct {
+		Content []byte
+	}
+
 	MachineCreateOptions struct {
 		MachineID    string
 		DesiredState coretypes.MachineDesiredState
@@ -73,6 +76,11 @@ type (
 		DesiredState coretypes.MachineDesiredState
 	}
 
+	MachineGetMachineLogsOptions struct {
+		MachineID string
+		Follow    bool
+	}
+
 	MachineService interface {
 		List(ctx context.Context) ([]*Machine, error)
 
@@ -85,6 +93,8 @@ type (
 		ListEvents(ctx context.Context, machineID string) ([]*MachineEvent, error)
 
 		SubscribeToEvents(ctx context.Context) <-chan *MachineEvent
+
+		GetMachineLogs(ctx context.Context, opts MachineGetMachineLogsOptions) (<-chan MachineLog, error)
 	}
 )
 

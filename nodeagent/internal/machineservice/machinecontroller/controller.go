@@ -13,9 +13,9 @@ import (
 
 type (
 	State struct {
-		Machine        *types.Machine
-		Reconciliation *Reconciliation
-		InitListener   *InitListener
+		Machine         *types.Machine
+		Reconciliation  *Reconciliation
+		RuntimeListener *RuntimeListener
 	}
 
 	Controller struct {
@@ -29,7 +29,7 @@ type (
 		db              *gorm.DB
 		volumeProvider  types.VolumeProvider
 		networkProvider types.NetworkProvider
-		runtimeProvider types.RuntimeProvider
+		runtimeService  types.RuntimeService
 		imageProvider   types.ImageProvider
 	}
 )
@@ -39,7 +39,7 @@ func New(
 	db *gorm.DB,
 	volumeProvider types.VolumeProvider,
 	networkProvider types.NetworkProvider,
-	runtimeProvider types.RuntimeProvider,
+	runtimeService types.RuntimeService,
 	imageProvider types.ImageProvider,
 ) *Controller {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -55,7 +55,7 @@ func New(
 		db:              db,
 		volumeProvider:  volumeProvider,
 		networkProvider: networkProvider,
-		runtimeProvider: runtimeProvider,
+		runtimeService:  runtimeService,
 		imageProvider:   imageProvider,
 	}
 
@@ -72,8 +72,8 @@ func New(
 
 func (c *Controller) Stop() error {
 	state := c.GetState()
-	if state.InitListener != nil {
-		state.InitListener.Cancel()
+	if state.RuntimeListener != nil {
+		state.RuntimeListener.Cancel()
 	}
 	if state.Reconciliation != nil {
 		state.Reconciliation.Cancel()
@@ -92,8 +92,8 @@ func (c *Controller) GetState() *State {
 	if c.state.Reconciliation != nil {
 		stateCopy.Reconciliation = typeutil.Ptr(*c.state.Reconciliation)
 	}
-	if c.state.InitListener != nil {
-		stateCopy.InitListener = typeutil.Ptr(*c.state.InitListener)
+	if c.state.RuntimeListener != nil {
+		stateCopy.RuntimeListener = typeutil.Ptr(*c.state.RuntimeListener)
 	}
 	return &stateCopy
 }

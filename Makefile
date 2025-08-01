@@ -1,4 +1,4 @@
-all: build-initcontainer build-init
+all: build-initcontainer build-init build-vmruntime build-nodeagent
 
 .PHONY: all tidy
 
@@ -8,10 +8,13 @@ build-initcontainer:
 build-init:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o resources/baepo-init -ldflags "-s -w" init/main.go
 
+build-vmruntime:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o resources/baepo-vmruntime -ldflags "-s -w" vmruntime/main.go
+
 build-nodeagent:
 	go build -race -o resources/baepo-nodeagent -ldflags "-s -w" nodeagent/main.go
 
-run-node: build-init build-initcontainer build-nodeagent
+run-node: build-init build-initcontainer build-vmruntime build-nodeagent
 	./resources/baepo-nodeagent
 
 upgrade-proto-version:

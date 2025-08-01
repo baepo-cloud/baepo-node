@@ -1,10 +1,12 @@
 package machinecontroller
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"errors"
 	"fmt"
 	"github.com/sourcegraph/conc/pool"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"time"
 
 	coretypes "github.com/baepo-cloud/baepo-node/core/types"
@@ -93,11 +95,13 @@ func (c *Controller) reconcile() {
 func (c *Controller) reconcileToPending(ctx context.Context, machine *types.Machine) (coretypes.MachineState, error) {
 	c.log.Debug("reconciling to pending state")
 
-	if machine.RuntimePID != nil && *machine.RuntimePID > 0 {
+	if c.isMachineRuntimeStarted(ctx, machine) {
 		if machine.State != coretypes.MachineStateTerminating {
 			c.eventBus.PublishEvent(NewStateChangedMessage(coretypes.MachineStateTerminating))
 		}
-		if err := c.terminateRuntime(ctx, machine); err != nil {
+
+		c.log.Debug("terminating runtime")
+		if err := c.runtimeService.Terminate(ctx, machine.ID); err != nil {
 			return coretypes.MachineStateError, fmt.Errorf("failed to terminate runtime: %w", err)
 		}
 	}
@@ -115,9 +119,9 @@ func (c *Controller) reconcileToRunning(ctx context.Context, machine *types.Mach
 	}
 
 	c.log.Debug("reconciling to running state")
-	if machine.State == coretypes.MachineStateError && machine.RuntimePID != nil && *machine.RuntimePID > 0 {
+	if machine.State == coretypes.MachineStateError && c.isMachineRuntimeStarted(ctx, machine) {
 		c.log.Debug("cleaning up error state")
-		if err := c.terminateRuntime(ctx, machine); err != nil {
+		if err := c.runtimeService.Terminate(ctx, machine.ID); err != nil {
 			return coretypes.MachineStateError, fmt.Errorf("failed to cleanup error state: %w", err)
 		}
 	}
@@ -126,32 +130,18 @@ func (c *Controller) reconcileToRunning(ctx context.Context, machine *types.Mach
 		return coretypes.MachineStateError, fmt.Errorf("failed to prepare resources: %w", err)
 	}
 
-	if machine.RuntimePID == nil || *machine.RuntimePID <= 0 {
+	if !c.isMachineRuntimeStarted(ctx, machine) {
 		c.log.Debug("starting runtime")
 		if ctx.Err() != nil {
 			return coretypes.MachineStateError, ctx.Err()
 		}
 
-		pid, err := c.runtimeProvider.Create(ctx, types.RuntimeCreateOptions{
-			Machine: machine,
-		})
+		err := c.runtimeService.Start(ctx, types.RuntimeStartOptions{Machine: machine})
 		if err != nil {
-			return coretypes.MachineStateError, fmt.Errorf("failed to create runtime: %w", err)
+			return coretypes.MachineStateError, fmt.Errorf("failed to start runtime: %w", err)
 		}
 
-		err = c.SetState(func(state *State) error {
-			state.Machine.RuntimePID = &pid
-			return c.db.WithContext(ctx).Select("RuntimePID").Save(state.Machine).Error
-		})
-		if err != nil {
-			return coretypes.MachineStateError, fmt.Errorf("failed to save runtime PID: %w", err)
-		}
-
-		if err = c.runtimeProvider.Boot(ctx, machine.ID); err != nil {
-			return coretypes.MachineStateError, fmt.Errorf("failed to boot machine: %w", err)
-		}
-
-		c.log.Debug("runtime started successfully", slog.Int("pid", pid))
+		c.log.Debug("runtime started successfully")
 	}
 
 	return coretypes.MachineStateRunning, nil
@@ -159,11 +149,11 @@ func (c *Controller) reconcileToRunning(ctx context.Context, machine *types.Mach
 
 func (c *Controller) reconcileToTerminated(ctx context.Context, machine *types.Machine) (coretypes.MachineState, error) {
 	c.log.Debug("reconciling to terminated state")
-	if machine.RuntimePID != nil && *machine.RuntimePID > 0 {
+	if c.isMachineRuntimeStarted(ctx, machine) {
 		if machine.State != coretypes.MachineStateTerminating {
 			c.eventBus.PublishEvent(NewStateChangedMessage(coretypes.MachineStateTerminating))
 		}
-		if err := c.terminateRuntime(ctx, machine); err != nil {
+		if err := c.runtimeService.Terminate(ctx, machine.ID); err != nil {
 			return coretypes.MachineStateError, fmt.Errorf("failed to terminate runtime: %w", err)
 		}
 	}
@@ -225,19 +215,10 @@ func (c *Controller) prepareMachine(ctx context.Context, machine *types.Machine)
 	return p.Wait()
 }
 
-func (c *Controller) terminateRuntime(ctx context.Context, machine *types.Machine) error {
-	c.log.Debug("terminating runtime", slog.Int("pid", *machine.RuntimePID))
-	if err := c.runtimeProvider.Terminate(ctx, machine.ID); err != nil {
-		return fmt.Errorf("failed to terminate runtime: %w", err)
-	}
+func (c *Controller) isMachineRuntimeStarted(ctx context.Context, machine *types.Machine) bool {
+	client, closeClient := c.runtimeService.GetClient(machine.ID)
+	defer closeClient()
 
-	err := c.SetState(func(state *State) error {
-		state.Machine.RuntimePID = nil
-		return c.db.WithContext(ctx).Select("RuntimePID").Save(state.Machine).Error
-	})
-	if err != nil {
-		return fmt.Errorf("failed to update runtime PID: %w", err)
-	}
-
-	return nil
+	_, err := client.GetState(ctx, connect.NewRequest(&emptypb.Empty{}))
+	return err == nil
 }
