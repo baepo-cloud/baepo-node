@@ -15,7 +15,20 @@ import (
 
 func (r *Runtime) startHypervisor(ctx context.Context) error {
 	r.vmmCmd = exec.Command(r.config.CloudHypervisorBinary, "--api-socket", r.getHypervisorSocketPath())
-	if err := r.vmmCmd.Start(); err != nil {
+
+	stdoutPipe, err := r.vmmCmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("failed to create stdout pipe: %w", err)
+	}
+	go r.logManager.HandleHypervisorOutput(stdoutPipe, false)
+
+	stderrPipe, err := r.vmmCmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("failed to create stderr pipe: %w", err)
+	}
+	go r.logManager.HandleHypervisorOutput(stderrPipe, true)
+
+	if err = r.vmmCmd.Start(); err != nil {
 		return fmt.Errorf("failed to start cloud hypervisor: %w", err)
 	}
 
@@ -67,8 +80,11 @@ func (r *Runtime) createVM(ctx context.Context) error {
 			Socket: r.getInitDaemonSocketPath(),
 		},
 		Console: &chclient.ConsoleConfig{
-			Mode: chclient.ConsoleConfigModeFile,
-			File: typeutil.Ptr(r.getHypervisorLogPath()),
+			Mode: chclient.ConsoleConfigModeNull,
+		},
+		Serial: &chclient.ConsoleConfig{
+			Mode: chclient.ConsoleConfigModeTty,
+			File: typeutil.Ptr("/dev/tty"),
 		},
 		Payload: chclient.PayloadConfig{
 			Kernel:    typeutil.Ptr(r.config.VMLinux),
@@ -94,6 +110,7 @@ func (r *Runtime) bootVM(ctx context.Context) error {
 		return fmt.Errorf("failed to boot vm (status code %v): %v", statusCode, string(res.Body))
 	}
 
+	r.logManager.WatchInitLogs()
 	return nil
 }
 

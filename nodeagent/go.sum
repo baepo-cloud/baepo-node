@@ -12,6 +12,12 @@ github.com/baepo-cloud/baepo-proto/go v0.0.0-20250727084821-d19131055ee9 h1:Es6I
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250727084821-d19131055ee9/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250801083936-d954a25a2156 h1:tu3xCA/Y9/sIcWchghQCamhwZayk2G4lHiOfPX23l+M=
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250801083936-d954a25a2156/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
+github.com/baepo-cloud/baepo-proto/go v0.0.0-20250801122304-9a21658f18d8 h1:anzsUilA8WEQucMIaHdSMGTZmYchwkHyDFAyAE80BU4=
+github.com/baepo-cloud/baepo-proto/go v0.0.0-20250801122304-9a21658f18d8/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
+github.com/baepo-cloud/baepo-proto/go v0.0.0-20250801131449-a15327919326 h1:jKWtLTZ2fUcgemV+6PibTqEP/NemtRLa1DUsKdqdxHQ=
+github.com/baepo-cloud/baepo-proto/go v0.0.0-20250801131449-a15327919326/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
+github.com/baepo-cloud/baepo-proto/go v0.0.0-20250803123921-6f5b82299279 h1:KkCT38TUE9awnBS8DHPX0DMlxSpPhOsyglfWNmuJwPc=
+github.com/baepo-cloud/baepo-proto/go v0.0.0-20250803123921-6f5b82299279/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
