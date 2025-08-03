@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-type logsManager struct {
+type logManager struct {
 	manager         *logmanager.Manager
 	runtime         *Runtime
 	ctx             context.Context
@@ -23,33 +23,33 @@ type logsManager struct {
 	containerLogSeq atomic.Uint64
 }
 
-func newLogsManager(runtime *Runtime) (*logsManager, error) {
-	manager, err := logmanager.New(path.Join(runtime.config.WorkingDir, "logs.json"))
+func newLogManager(runtime *Runtime) (*logManager, error) {
+	coreManager, err := logmanager.New(path.Join(runtime.config.WorkingDir, "logs.json"))
 	if err != nil {
 		return nil, err
 	}
 
-	logManager := &logsManager{manager: manager, runtime: runtime}
-	logManager.ctx, logManager.cancel = context.WithCancel(context.Background())
-	if err = logManager.startSerialSocketServer(); err != nil {
+	manager := &logManager{manager: coreManager, runtime: runtime}
+	manager.ctx, manager.cancel = context.WithCancel(context.Background())
+	if err = manager.startSerialSocketServer(); err != nil {
 		return nil, fmt.Errorf("failed to start serial socket server: %v", err)
 	}
 
-	logManager.watchInitLogs()
-	return logManager, nil
+	manager.watchInitLogs()
+	return manager, nil
 }
 
-func (m *logsManager) Stop() {
+func (m *logManager) Stop() {
 	m.cancel()
 	m.wg.Wait()
 	_ = m.manager.Close()
 }
 
-func (m *logsManager) GetSerialSocketPath() string {
+func (m *logManager) GetSerialSocketPath() string {
 	return path.Join(m.runtime.config.WorkingDir, "serial.socket")
 }
 
-func (m *logsManager) startSerialSocketServer() error {
+func (m *logManager) startSerialSocketServer() error {
 	lis, err := net.Listen("unix", m.GetSerialSocketPath())
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func (m *logsManager) startSerialSocketServer() error {
 	return nil
 }
 
-func (m *logsManager) watchInitLogs() {
+func (m *logManager) watchInitLogs() {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	m.wg.Add(1)
 
@@ -96,7 +96,7 @@ func (m *logsManager) watchInitLogs() {
 	}()
 }
 
-func (m *logsManager) connectToInitLogStream() error {
+func (m *logManager) connectToInitLogStream() error {
 	client, closeClient := m.runtime.newInitClient()
 	defer closeClient()
 
@@ -127,7 +127,7 @@ func (m *logsManager) connectToInitLogStream() error {
 	return stream.Err()
 }
 
-func (m *logsManager) handleSerialConn(conn net.Conn) error {
+func (m *logManager) handleSerialConn(conn net.Conn) error {
 	scanner := bufio.NewScanner(conn)
 	for scanner.Scan() {
 		line := scanner.Text()

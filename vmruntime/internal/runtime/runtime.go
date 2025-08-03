@@ -28,7 +28,7 @@ type (
 		vmmClient  *chclient.ClientWithResponses
 		vmmCmd     *exec.Cmd
 		httpServer *http.Server
-		logManager *logsManager
+		logManager *logManager
 	}
 )
 
@@ -57,7 +57,7 @@ func (r *Runtime) Start(ctx context.Context) error {
 		return err
 	}
 
-	logManager, err := newLogsManager(r)
+	logManager, err := newLogManager(r)
 	if err != nil {
 		return fmt.Errorf("failed to initialize log manager: %w", err)
 	}
