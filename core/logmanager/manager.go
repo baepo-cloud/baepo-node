@@ -1,6 +1,7 @@
 package logmanager
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"sync"
@@ -31,30 +32,71 @@ const (
 	ContainerLogEntrySource EntrySource = "container"
 )
 
-func New(logPath string) (*Manager, error) {
-	file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+func New(logPath string) *Manager {
+	return &Manager{logPath: logPath}
+}
+
+func (m *Manager) WriteLog(entry Entry) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	if m.logFile == nil {
+		file, err := os.OpenFile(m.logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			return err
+		}
+
+		m.logFile = file
+	}
+	if m.encoder == nil {
+		m.encoder = json.NewEncoder(m.logFile)
+	}
+
+	entry.Timestamp = time.Now()
+	return m.encoder.Encode(entry)
+}
+
+func (m *Manager) ReadLogs(ctx context.Context) (<-chan Entry, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	file, err := os.Open(m.logPath)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Manager{
-		logFile: file,
-		encoder: json.NewEncoder(file),
-		logPath: logPath,
-	}, nil
+	entries := make(chan Entry)
+	go func() {
+		defer file.Close()
+		defer close(entries)
+		decoder := json.NewDecoder(file)
+
+		for {
+			if ctx.Err() != nil {
+				return
+			}
+
+			var entry Entry
+			if err = decoder.Decode(&entry); err != nil {
+				return
+			}
+
+			entries <- entry
+		}
+	}()
+
+	return entries, nil
 }
 
-func (lm *Manager) WriteLog(entry Entry) error {
-	lm.mutex.Lock()
-	defer lm.mutex.Unlock()
+func (m *Manager) Close() error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
-	entry.Timestamp = time.Now()
-	return lm.encoder.Encode(entry)
-}
+	if m.logFile != nil {
+		if err := m.logFile.Close(); err != nil {
+			return err
+		}
+	}
 
-func (lm *Manager) Close() error {
-	lm.mutex.Lock()
-	defer lm.mutex.Unlock()
-
-	return lm.logFile.Close()
+	return nil
 }

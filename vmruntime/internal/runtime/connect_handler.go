@@ -4,10 +4,12 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	"github.com/baepo-cloud/baepo-node/core/logmanager"
 	"github.com/baepo-cloud/baepo-node/vmruntime/internal/chclient"
 	nodev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/node/v1"
 	"github.com/baepo-cloud/baepo-proto/go/baepo/node/v1/nodev1pbconnect"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"net"
 	"net/http"
 	"os"
@@ -46,8 +48,55 @@ func (h *connectHandler) GetState(ctx context.Context, req *connect.Request[empt
 }
 
 func (h *connectHandler) GetLogs(ctx context.Context, req *connect.Request[nodev1pb.RuntimeGetLogsRequest], stream *connect.ServerStream[nodev1pb.RuntimeGetLogsResponse]) error {
-	//TODO implement me
-	panic("implement me")
+	initialLogs, err := h.runtime.logManager.ReadLogs(ctx)
+	if err != nil {
+		return err
+	}
+
+	for entry := range initialLogs {
+		if entry.Source != logmanager.MachineLogEntrySource {
+			continue
+		}
+
+		err = stream.Send(&nodev1pb.RuntimeGetLogsResponse{
+			Timestamp: timestamppb.New(entry.Timestamp),
+			Content:   []byte(entry.Message),
+		})
+		if err != nil {
+			return err
+		}
+	}
+	if !req.Msg.Follow {
+		return nil
+	}
+
+	liveLogs := make(chan logmanager.Entry, 100)
+	cancelHandler := h.runtime.logManager.HandleLogs(func(entry logmanager.Entry) {
+		select {
+		case liveLogs <- entry:
+		case <-ctx.Done():
+		}
+	})
+	defer cancelHandler()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case entry := <-liveLogs:
+			if entry.Source != logmanager.MachineLogEntrySource {
+				continue
+			}
+
+			err = stream.Send(&nodev1pb.RuntimeGetLogsResponse{
+				Timestamp: timestamppb.New(entry.Timestamp),
+				Content:   []byte(entry.Message),
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
 }
 
 func (h *connectHandler) GetContainerLogs(ctx context.Context, req *connect.Request[nodev1pb.RuntimeGetContainerLogsRequest], stream *connect.ServerStream[nodev1pb.RuntimeGetContainerLogsResponse]) error {

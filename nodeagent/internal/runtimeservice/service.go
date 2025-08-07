@@ -20,10 +20,10 @@ func New(config *types.Config) *Service {
 	}
 }
 
-func (s *Service) getRuntimeDir(machineID string) string {
+func (s *Service) GetMachineDirectory(machineID string) string {
 	return path.Join(s.config.StorageDirectory, "runtimes", machineID)
 }
 
 func (s *Service) getRuntimeConfigPath(machineID string) string {
-	return path.Join(s.getRuntimeDir(machineID), "runtimeconfig.json")
+	return path.Join(s.GetMachineDirectory(machineID), "runtimeconfig.json")
 }

@@ -16,5 +16,7 @@ type (
 		Terminate(ctx context.Context, machineID string) error
 
 		GetClient(machineID string) (nodev1pbconnect.RuntimeClient, func())
+
+		GetMachineDirectory(machineID string) string
 	}
 )

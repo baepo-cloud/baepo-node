@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"github.com/baepo-cloud/baepo-node/core/logmanager"
 	nodev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/node/v1"
+	"github.com/nrednav/cuid2"
+	"maps"
 	"net"
 	"path"
 	"sync"
@@ -21,17 +23,18 @@ type logManager struct {
 	cancel          context.CancelFunc
 	wg              sync.WaitGroup
 	containerLogSeq atomic.Uint64
+	logHandlers     map[string]func(entry logmanager.Entry)
+	logHandlersLock sync.RWMutex
 }
 
-func newLogManager(runtime *Runtime) (*logManager, error) {
-	coreManager, err := logmanager.New(path.Join(runtime.config.WorkingDir, "logs.json"))
-	if err != nil {
-		return nil, err
+func newLogManager(runtime *Runtime) *logManager {
+	manager := &logManager{
+		manager:     logmanager.New(path.Join(runtime.config.WorkingDir, "logs.json")),
+		runtime:     runtime,
+		logHandlers: make(map[string]func(entry logmanager.Entry)),
 	}
-
-	manager := &logManager{manager: coreManager, runtime: runtime}
 	manager.ctx, manager.cancel = context.WithCancel(context.Background())
-	return manager, nil
+	return manager
 }
 
 func (m *logManager) Stop() {
@@ -54,12 +57,11 @@ func (m *logManager) ListenSerialSocket() {
 		scanner := bufio.NewScanner(c)
 		for scanner.Scan() {
 			line := scanner.Text()
-			fmt.Println(line)
 			if line == "" {
 				continue
 			}
 
-			_ = m.manager.WriteLog(logmanager.Entry{
+			_ = m.writeLog(logmanager.Entry{
 				Source:  logmanager.MachineLogEntrySource,
 				Message: line,
 			})
@@ -87,7 +89,7 @@ func (m *logManager) ListenInitLogs() {
 			}
 
 			log := stream.Msg()
-			_ = m.manager.WriteLog(logmanager.Entry{
+			_ = m.writeLog(logmanager.Entry{
 				Source:      logmanager.ContainerLogEntrySource,
 				ContainerID: &log.ContainerId,
 				Timestamp:   log.Timestamp.AsTime(),
@@ -99,6 +101,20 @@ func (m *logManager) ListenInitLogs() {
 
 		return stream.Err()
 	})
+}
+
+func (m *logManager) HandleLogs(handler func(entry logmanager.Entry)) func() {
+	m.logHandlersLock.Lock()
+	defer m.logHandlersLock.Unlock()
+
+	handlerID := cuid2.Generate()
+	m.logHandlers[handlerID] = handler
+	return func() {
+		m.logHandlersLock.Lock()
+		defer m.logHandlersLock.Unlock()
+
+		delete(m.logHandlers, handlerID)
+	}
 }
 
 func (m *logManager) startListener(listen func() error) {
@@ -120,4 +136,23 @@ func (m *logManager) startListener(listen func() error) {
 			}
 		}
 	}()
+}
+
+func (m *logManager) ReadLogs(ctx context.Context) (<-chan logmanager.Entry, error) {
+	return m.manager.ReadLogs(ctx)
+}
+
+func (m *logManager) writeLog(entry logmanager.Entry) error {
+	if err := m.manager.WriteLog(entry); err != nil {
+		return err
+	}
+
+	m.logHandlersLock.RLock()
+	handlers := maps.Values(m.logHandlers)
+	m.logHandlersLock.RUnlock()
+
+	for handler := range handlers {
+		handler(entry)
+	}
+	return nil
 }

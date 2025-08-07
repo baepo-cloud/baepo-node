@@ -58,13 +58,8 @@ func (r *Runtime) Start(ctx context.Context) error {
 		return err
 	}
 
-	logManager, err := newLogManager(r)
-	if err != nil {
-		return fmt.Errorf("failed to initialize log manager: %w", err)
-	}
-	r.logManager = logManager
-
-	if err = r.buildInitRamFS(ctx); err != nil {
+	r.logManager = newLogManager(r)
+	if err := r.buildInitRamFS(ctx); err != nil {
 		return err
 	} else if err = r.startHypervisor(ctx); err != nil {
 		return err
