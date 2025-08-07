@@ -21,6 +21,7 @@ type (
 		InitContainerBinary   string
 		CloudHypervisorBinary string
 		VMLinux               string
+		Debug                 bool
 	}
 
 	Runtime struct {

@@ -31,8 +31,13 @@ import (
 	"time"
 )
 
+var Debug = os.Getenv("DEBUG") == "true"
+
 func main() {
-	slog.SetLogLoggerLevel(slog.LevelDebug)
+	if Debug {
+		slog.SetLogLoggerLevel(slog.LevelDebug)
+	}
+
 	fx.New(
 		fxlog.Logger(),
 		fx.Provide(provideConfig),
@@ -93,6 +98,7 @@ func main() {
 
 func provideConfig() (*types.Config, error) {
 	config := types.Config{
+		Debug:            Debug,
 		ClusterID:        os.Getenv("NODE_CLUSTER_ID"),
 		BootstrapToken:   os.Getenv("NODE_BOOTSTRAP_TOKEN"),
 		IPAddr:           os.Getenv("NODE_IP_ADDR"),

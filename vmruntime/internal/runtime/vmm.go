@@ -14,7 +14,15 @@ import (
 )
 
 func (r *Runtime) startHypervisor(ctx context.Context) error {
+	if _, err := os.Stat(r.getHypervisorSocketPath()); err == nil {
+		_ = r.stopHypervisor(ctx)
+	}
+
 	r.vmmCmd = exec.Command(r.config.CloudHypervisorBinary, "--api-socket", r.getHypervisorSocketPath())
+	if r.config.Debug {
+		r.vmmCmd.Stdout = os.Stdout
+		r.vmmCmd.Stderr = os.Stderr
+	}
 	if err := r.vmmCmd.Start(); err != nil {
 		return fmt.Errorf("failed to start cloud hypervisor: %w", err)
 	}
@@ -70,8 +78,8 @@ func (r *Runtime) createVM(ctx context.Context) error {
 			Mode: chclient.ConsoleConfigModeNull,
 		},
 		Serial: &chclient.ConsoleConfig{
-			Mode: chclient.ConsoleConfigModeSocket,
-			File: typeutil.Ptr(r.logManager.GetSerialSocketPath()),
+			Mode:   chclient.ConsoleConfigModeSocket,
+			Socket: typeutil.Ptr(r.logManager.GetSerialSocketPath()),
 		},
 		Payload: chclient.PayloadConfig{
 			Kernel:    typeutil.Ptr(r.config.VMLinux),
@@ -96,6 +104,9 @@ func (r *Runtime) bootVM(ctx context.Context) error {
 	} else if statusCode := res.StatusCode(); statusCode != http.StatusNoContent {
 		return fmt.Errorf("failed to boot vm (status code %v): %v", statusCode, string(res.Body))
 	}
+
+	r.logManager.ListenSerialSocket()
+	r.logManager.ListenInitLogs()
 
 	return nil
 }
@@ -129,5 +140,6 @@ func (r *Runtime) stopHypervisor(ctx context.Context) error {
 	}
 	_ = os.Remove(r.getHypervisorSocketPath())
 	_ = os.Remove(r.getInitRamFSPath())
+	_ = os.Remove(r.logManager.GetSerialSocketPath())
 	return nil
 }

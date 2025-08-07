@@ -29,6 +29,7 @@ func main() {
 		InitContainerBinary:   os.Getenv("VMRUNTIME_INIT_CONTAINER_BINARY"),
 		CloudHypervisorBinary: os.Getenv("VMRUNTIME_CLOUD_HYPERVISOR_BINARY"),
 		VMLinux:               os.Getenv("VMRUNTIME_VM_LINUX"),
+		Debug:                 os.Getenv("DEBUG") == "true",
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -38,6 +39,12 @@ func main() {
 
 	errChan := make(chan error, 1)
 	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				errChan <- fmt.Errorf("runtime goroutine panicked: %v", err)
+			}
+		}()
+
 		errChan <- r.Start(ctx)
 	}()
 
