@@ -14,7 +14,7 @@ func (s *Service) GetClient(machineID string) (nodev1pbconnect.RuntimeClient, fu
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-				conn, err := net.Dial("unix", path.Join(s.getRuntimeDir(machineID), "runtime.sock"))
+				conn, err := net.Dial("unix", path.Join(s.GetMachineDirectory(machineID), "runtime.sock"))
 				if err != nil {
 					return nil, err
 				}

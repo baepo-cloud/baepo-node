@@ -9,6 +9,8 @@ import (
 	"gorm.io/gorm"
 	"log/slog"
 	"sync"
+	"sync/atomic"
+	"time"
 )
 
 type (
@@ -25,6 +27,7 @@ type (
 		eventBus  *eventbus.Bus[any]
 		cancel    context.CancelFunc
 		wg        sync.WaitGroup
+		stopping  atomic.Bool
 
 		db              *gorm.DB
 		volumeProvider  types.VolumeProvider
@@ -71,15 +74,31 @@ func New(
 }
 
 func (c *Controller) Stop() error {
+	c.log.Debug("stopping controller")
 	state := c.GetState()
+	c.stopping.Store(true)
 	if state.RuntimeListener != nil {
 		state.RuntimeListener.Cancel()
 	}
+
+	waitChan := make(chan struct{}, 1)
+	go func() {
+		defer close(waitChan)
+		
+		c.wg.Wait()
+		waitChan <- struct{}{}
+	}()
+
+	select {
+	case <-waitChan:
+	case <-time.After(time.Second * 10):
+		c.log.Debug("forcing to stop controller")
+	}
+
 	if state.Reconciliation != nil {
 		state.Reconciliation.Cancel()
 	}
 	c.cancel()
-	c.wg.Wait()
 	return nil
 }
 

@@ -1,6 +1,7 @@
 package types
 
 type Config struct {
+	Debug            bool
 	ClusterID        string
 	BootstrapToken   string
 	IPAddr           string

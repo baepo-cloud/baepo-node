@@ -3,6 +3,7 @@ package machinecontroller
 import (
 	"connectrpc.com/connect"
 	"context"
+	"errors"
 	coretypes "github.com/baepo-cloud/baepo-node/core/types"
 	"github.com/baepo-cloud/baepo-node/core/typeutil"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
@@ -51,6 +52,9 @@ func (c *Controller) startRuntimeListener(machine *types.Machine) {
 				return
 			case <-ticker.C:
 				err := c.connectToRuntimeListener(ctx, machine.ID)
+				if errors.Is(err, context.Canceled) {
+					err = nil
+				}
 				c.eventBus.PublishEvent(&RuntimeListenerDisconnectedMessage{Error: err})
 				c.log.Debug("runtime listener disconnected", slog.Any("error", err))
 				if err != nil {

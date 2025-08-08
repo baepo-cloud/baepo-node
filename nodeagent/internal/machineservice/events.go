@@ -3,6 +3,7 @@ package machineservice
 import (
 	"context"
 	"fmt"
+	coretypes "github.com/baepo-cloud/baepo-node/core/types"
 	"github.com/baepo-cloud/baepo-node/core/v1pbadapter"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/machineservice/machinecontroller"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
@@ -14,7 +15,7 @@ import (
 	"log/slog"
 )
 
-func (s *Service) newMachineEventsHandler(machine *types.Machine) func(context.Context, any) {
+func (s *Service) handleMachineEventsStorage(machine *types.Machine) func(context.Context, any) {
 	return func(ctx context.Context, anyEvent any) {
 		var machineEvent *types.MachineEvent
 		var protoMessage proto.Message
@@ -112,6 +113,29 @@ func (s *Service) newMachineEventsHandler(machine *types.Machine) func(context.C
 		}
 
 		s.machineEvents.PublishEvent(machineEvent)
+	}
+}
+
+func (s *Service) handleMachineTerminated(machine *types.Machine) func(context.Context, any) {
+	return func(ctx context.Context, anyEvent any) {
+		event, ok := anyEvent.(*machinecontroller.StateChangedMessage)
+		if !ok || event.State != coretypes.MachineStateTerminated {
+			return
+		}
+
+		controller, ok := s.machineControllers.Get(machine.ID)
+		if !ok {
+			return
+		}
+
+		if err := controller.Stop(); err != nil {
+			s.log.Error("failed to stop machine controller",
+				slog.String("machine-id", machine.ID),
+				slog.Any("error", err))
+			return
+		}
+
+		s.machineControllers.Del(machine.ID)
 	}
 }
 

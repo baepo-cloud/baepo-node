@@ -56,7 +56,15 @@ type (
 	}
 
 	MachineLog struct {
-		Content []byte
+		Content   []byte
+		Timestamp time.Time
+	}
+
+	MachineContainerLog struct {
+		ContainerID string
+		Error       bool
+		Content     []byte
+		Timestamp   time.Time
 	}
 
 	MachineCreateOptions struct {
@@ -81,6 +89,12 @@ type (
 		Follow    bool
 	}
 
+	MachineGetContainerLogsOptions struct {
+		MachineID   string
+		ContainerID string
+		Follow      bool
+	}
+
 	MachineService interface {
 		List(ctx context.Context) ([]*Machine, error)
 
@@ -95,6 +109,8 @@ type (
 		SubscribeToEvents(ctx context.Context) <-chan *MachineEvent
 
 		GetMachineLogs(ctx context.Context, opts MachineGetMachineLogsOptions) (<-chan MachineLog, error)
+
+		GetContainerLogs(ctx context.Context, opts MachineGetContainerLogsOptions) (<-chan MachineContainerLog, error)
 	}
 )
 

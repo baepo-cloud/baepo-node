@@ -21,6 +21,7 @@ type (
 		InitContainerBinary   string
 		CloudHypervisorBinary string
 		VMLinux               string
+		Debug                 bool
 	}
 
 	Runtime struct {
@@ -28,6 +29,7 @@ type (
 		vmmClient  *chclient.ClientWithResponses
 		vmmCmd     *exec.Cmd
 		httpServer *http.Server
+		logManager *logManager
 	}
 )
 
@@ -52,10 +54,11 @@ func New(config *Config) *Runtime {
 }
 
 func (r *Runtime) Start(ctx context.Context) error {
-	if err := r.startConnectServer(); err != nil {
+	if err := r.startGrpcServer(); err != nil {
 		return err
 	}
 
+	r.logManager = newLogManager(r)
 	if err := r.buildInitRamFS(ctx); err != nil {
 		return err
 	} else if err = r.startHypervisor(ctx); err != nil {
@@ -71,20 +74,26 @@ func (r *Runtime) Start(ctx context.Context) error {
 
 func (r *Runtime) Stop(ctx context.Context) error {
 	if r.httpServer != nil {
-		r.httpServer.Shutdown(ctx)
+		_ = r.httpServer.Shutdown(ctx)
 	}
 
 	if err := r.terminateVM(ctx); err != nil {
 		return fmt.Errorf("failed to terminate vm: %w", err)
-	} else if err = r.stopHypervisor(ctx); err != nil {
-		return fmt.Errorf("failed to stop hypervisor: %w", err)
 	}
 
-	return nil
+	return r.ForceStop(ctx)
 }
 
 func (r *Runtime) ForceStop(ctx context.Context) error {
-	return r.stopHypervisor(ctx)
+	if err := r.stopHypervisor(ctx); err != nil {
+		return fmt.Errorf("failed to stop hypervisor: %w", err)
+	}
+
+	if r.logManager != nil {
+		r.logManager.Stop()
+	}
+
+	return nil
 }
 
 func (r *Runtime) newInitClient() (nodev1pbconnect.InitClient, func()) {
@@ -117,10 +126,6 @@ func (r *Runtime) getHypervisorSocketPath() string {
 
 func (r *Runtime) getInitDaemonSocketPath() string {
 	return path.Join(r.config.WorkingDir, "init.socket")
-}
-
-func (r *Runtime) getHypervisorLogPath() string {
-	return path.Join(r.config.WorkingDir, "machine.log")
 }
 
 func (r *Runtime) getInitRamFSPath() string {

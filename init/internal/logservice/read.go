@@ -11,7 +11,7 @@ import (
 	"path"
 )
 
-func (s *Service) Read(ctx context.Context, opts types.LogReadOptions) (<-chan *types.LogEntry, error) {
+func (s *Service) Read(ctx context.Context) (<-chan *types.LogEntry, error) {
 	logChan := make(chan *types.LogEntry)
 
 	go func() {
@@ -19,10 +19,6 @@ func (s *Service) Read(ctx context.Context, opts types.LogReadOptions) (<-chan *
 
 		if err := s.readHistoricalLogs(ctx, logChan); err != nil {
 			slog.Error("failed to read historical logs", slog.Any("error", err))
-			return
-		}
-
-		if !opts.Follow {
 			return
 		}
 

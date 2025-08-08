@@ -5,6 +5,6 @@ go 1.24.1
 toolchain go1.24.4
 
 require (
-	github.com/baepo-cloud/baepo-proto/go v0.0.0-20250801083936-d954a25a2156 // indirect
+	github.com/baepo-cloud/baepo-proto/go v0.0.0-20250808102228-88fd923179a3 // indirect
 	github.com/spf13/pflag v1.0.7 // indirect
 )

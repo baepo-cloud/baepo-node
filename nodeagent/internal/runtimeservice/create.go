@@ -47,7 +47,7 @@ func (s *Service) Start(ctx context.Context, opts types.RuntimeStartOptions) err
 }
 
 func (s *Service) createRuntimeConfigFile(opts types.RuntimeStartOptions) error {
-	runtimeDir := s.getRuntimeDir(opts.Machine.ID)
+	runtimeDir := s.GetMachineDirectory(opts.Machine.ID)
 	_ = os.MkdirAll(runtimeDir, 0644)
 
 	initConfig := coretypes.RuntimeConfig{

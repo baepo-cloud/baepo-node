@@ -100,6 +100,7 @@ func (s *Service) loadMachines(ctx context.Context) error {
 func (s *Service) newMachineController(machine *types.Machine) *machinecontroller.Controller {
 	ctrl := machinecontroller.New(machine, s.db, s.volumeProvider, s.networkProvider, s.runtimeService,
 		s.imageProvider)
-	ctrl.SubscribeToEvents(s.newMachineEventsHandler(machine))
+	ctrl.SubscribeToEvents(s.handleMachineEventsStorage(machine))
+	ctrl.SubscribeToEvents(s.handleMachineTerminated(machine))
 	return ctrl
 }
