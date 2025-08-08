@@ -5,9 +5,11 @@ import (
 	"github.com/nrednav/cuid2"
 	"github.com/sourcegraph/conc/pool"
 	"sync"
+	"sync/atomic"
 )
 
 type Bus[T any] struct {
+	closed            atomic.Bool
 	eventsChan        chan T
 	eventHandlers     map[string]func(context.Context, T)
 	eventHandlersLock sync.RWMutex
@@ -23,7 +25,9 @@ func NewBus[T any]() *Bus[T] {
 
 func (b *Bus[T]) PublishEvent(event T) {
 	go func() {
-		b.eventsChan <- event
+		if b.closed.Load() {
+			b.eventsChan <- event
+		}
 	}()
 }
 
@@ -41,7 +45,10 @@ func (b *Bus[T]) SubscribeToEvents(handler func(context.Context, T)) func() {
 }
 
 func (b *Bus[T]) StartDispatcher(ctx context.Context) {
-	defer close(b.eventsChan)
+	defer func() {
+		b.closed.Store(true)
+		close(b.eventsChan)
+	}()
 
 	for {
 		select {

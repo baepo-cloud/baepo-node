@@ -35,7 +35,7 @@ func (c *Controller) shouldReconcile(machine *types.Machine) bool {
 
 func (c *Controller) reconcile() {
 	state := c.GetState()
-	if state.Reconciliation != nil {
+	if state.Reconciliation != nil || c.stopping.Load() {
 		c.log.Debug("already reconciling, skipping")
 		return
 	}

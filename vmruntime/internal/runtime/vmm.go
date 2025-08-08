@@ -107,7 +107,6 @@ func (r *Runtime) bootVM(ctx context.Context) error {
 
 	r.logManager.ListenSerialSocket()
 	r.logManager.ListenInitLogs()
-
 	return nil
 }
 
