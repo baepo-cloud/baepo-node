@@ -54,7 +54,7 @@ func New(config *Config) *Runtime {
 }
 
 func (r *Runtime) Start(ctx context.Context) error {
-	if err := r.startConnectServer(); err != nil {
+	if err := r.startGrpcServer(); err != nil {
 		return err
 	}
 

@@ -31,7 +31,8 @@ func (s *Service) GetMachineLogs(ctx context.Context, opts types.MachineGetMachi
 		for stream.Receive() {
 			log := stream.Msg()
 			logs <- types.MachineLog{
-				Content: log.Content,
+				Content:   log.Content,
+				Timestamp: log.Timestamp.AsTime(),
 			}
 		}
 	}()
@@ -53,15 +54,16 @@ func (s *Service) readMachineLogsFromFile(ctx context.Context, machineID string)
 			select {
 			case <-ctx.Done():
 				return
-			case logEntry, ok := <-entries:
+			case log, ok := <-entries:
 				if !ok {
 					return
-				} else if logEntry.Source != logmanager.MachineLogEntrySource {
+				} else if log.Source != logmanager.MachineLogEntrySource {
 					continue
 				}
 
 				logs <- types.MachineLog{
-					Content: []byte(logEntry.Message),
+					Content:   []byte(log.Message),
+					Timestamp: log.Timestamp,
 				}
 			}
 		}

@@ -6,6 +6,7 @@ import (
 	"github.com/baepo-cloud/baepo-node/core/v1pbadapter"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	nodev1pb "github.com/baepo-cloud/baepo-proto/go/baepo/node/v1"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func (s *Server) ListMachines(ctx context.Context, _ *connect.Request[nodev1pb.NodeListMachinesRequest]) (*connect.Response[nodev1pb.NodeListMachinesResponse], error) {
@@ -62,36 +63,36 @@ func (s *Server) GetMachineLogs(ctx context.Context, req *connect.Request[nodev1
 	}
 }
 
-func (s *Server) GetContainerLogs(ctx context.Context, c *connect.Request[nodev1pb.NodeGetContainerLogsRequest], c2 *connect.ServerStream[nodev1pb.NodeGetContainerLogsResponse]) error {
-	//machine, err := s.machineService.FindByID(ctx, req.Msg.MachineId)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//client, closeClient := s.runtimeProvider.NewInitClient(machine.ID)
-	//defer closeClient()
+func (s *Server) GetContainerLogs(ctx context.Context, req *connect.Request[nodev1pb.NodeGetContainerLogsRequest], stream *connect.ServerStream[nodev1pb.NodeGetContainerLogsResponse]) error {
+	logs, err := s.machineService.GetContainerLogs(ctx, types.MachineGetContainerLogsOptions{
+		MachineID:   req.Msg.MachineId,
+		ContainerID: req.Msg.ContainerId,
+		Follow:      req.Msg.Follow,
+	})
+	if err != nil {
+		return err
+	}
 
-	//readStream, err := client.GetLogs(ctx, connect.NewRequest(&nodev1pb.InitGetLogsRequest{
-	//	Container: req.Msg.ContainerName,
-	//	Follow:    req.Msg.Follow,
-	//}))
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//for readStream.Receive() {
-	//	msg := readStream.Msg()
-	//	err = writeStream.Send(&nodev1pb.NodeGetMachineLogsResponse{
-	//		Error:         msg.Error,
-	//		ContainerName: msg.ContainerName,
-	//		Content:       msg.Content,
-	//		Timestamp:     msg.Timestamp,
-	//	})
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
-	return nil
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case log, ok := <-logs:
+			if !ok {
+				return nil
+			}
+
+			err = stream.Send(&nodev1pb.NodeGetContainerLogsResponse{
+				ContainerId: log.ContainerID,
+				Error:       log.Error,
+				Content:     log.Content,
+				Timestamp:   timestamppb.New(log.Timestamp),
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
 }
 
 func (s *Server) adaptMachine(machine *types.Machine) *nodev1pb.Machine {

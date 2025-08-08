@@ -16,13 +16,13 @@ import (
 	"path/filepath"
 )
 
-type connectHandler struct {
+type grpcHandler struct {
 	runtime *Runtime
 }
 
-var _ nodev1pbconnect.RuntimeHandler = (*connectHandler)(nil)
+var _ nodev1pbconnect.RuntimeHandler = (*grpcHandler)(nil)
 
-func (r *Runtime) startConnectServer() error {
+func (r *Runtime) startGrpcServer() error {
 	unixSocket := filepath.Join(r.config.WorkingDir, "runtime.sock")
 	_ = os.Remove(unixSocket)
 
@@ -32,13 +32,13 @@ func (r *Runtime) startConnectServer() error {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle(nodev1pbconnect.NewRuntimeHandler(&connectHandler{runtime: r}))
+	mux.Handle(nodev1pbconnect.NewRuntimeHandler(&grpcHandler{runtime: r}))
 	r.httpServer = &http.Server{Handler: mux}
 	go r.httpServer.Serve(ln)
 	return nil
 }
 
-func (h *connectHandler) GetState(ctx context.Context, req *connect.Request[emptypb.Empty]) (*connect.Response[nodev1pb.RuntimeGetStateResponse], error) {
+func (h *grpcHandler) GetState(ctx context.Context, req *connect.Request[emptypb.Empty]) (*connect.Response[nodev1pb.RuntimeGetStateResponse], error) {
 	res, _ := h.runtime.vmmClient.GetVmInfoWithResponse(ctx)
 
 	return connect.NewResponse(&nodev1pb.RuntimeGetStateResponse{
@@ -47,7 +47,7 @@ func (h *connectHandler) GetState(ctx context.Context, req *connect.Request[empt
 	}), nil
 }
 
-func (h *connectHandler) GetLogs(ctx context.Context, req *connect.Request[nodev1pb.RuntimeGetLogsRequest], stream *connect.ServerStream[nodev1pb.RuntimeGetLogsResponse]) error {
+func (h *grpcHandler) GetLogs(ctx context.Context, req *connect.Request[nodev1pb.RuntimeGetLogsRequest], stream *connect.ServerStream[nodev1pb.RuntimeGetLogsResponse]) error {
 	initialLogs, err := h.runtime.logManager.ReadLogs(ctx)
 	if err != nil {
 		return err
@@ -99,12 +99,65 @@ func (h *connectHandler) GetLogs(ctx context.Context, req *connect.Request[nodev
 	}
 }
 
-func (h *connectHandler) GetContainerLogs(ctx context.Context, req *connect.Request[nodev1pb.RuntimeGetContainerLogsRequest], stream *connect.ServerStream[nodev1pb.RuntimeGetContainerLogsResponse]) error {
-	//TODO implement me
-	panic("implement me")
+func (h *grpcHandler) GetContainerLogs(ctx context.Context, req *connect.Request[nodev1pb.RuntimeGetContainerLogsRequest], stream *connect.ServerStream[nodev1pb.RuntimeGetContainerLogsResponse]) error {
+	initialLogs, err := h.runtime.logManager.ReadLogs(ctx)
+	if err != nil {
+		return err
+	}
+
+	for entry := range initialLogs {
+		if entry.Source != logmanager.ContainerLogEntrySource || entry.ContainerID == nil ||
+			*entry.ContainerID != req.Msg.ContainerId {
+			continue
+		}
+
+		err = stream.Send(&nodev1pb.RuntimeGetContainerLogsResponse{
+			ContainerId: *entry.ContainerID,
+			Error:       entry.Stderr,
+			Content:     []byte(entry.Message),
+			Timestamp:   timestamppb.New(entry.Timestamp),
+		})
+		if err != nil {
+			return err
+		}
+	}
+	if !req.Msg.Follow {
+		return nil
+	}
+
+	liveLogs := make(chan logmanager.Entry, 100)
+	cancelHandler := h.runtime.logManager.HandleLogs(func(entry logmanager.Entry) {
+		select {
+		case liveLogs <- entry:
+		case <-ctx.Done():
+		}
+	})
+	defer cancelHandler()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case entry := <-liveLogs:
+			if entry.Source != logmanager.ContainerLogEntrySource || entry.ContainerID == nil ||
+				*entry.ContainerID != req.Msg.ContainerId {
+				continue
+			}
+
+			err = stream.Send(&nodev1pb.RuntimeGetContainerLogsResponse{
+				ContainerId: *entry.ContainerID,
+				Error:       entry.Stderr,
+				Content:     []byte(entry.Message),
+				Timestamp:   timestamppb.New(entry.Timestamp),
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
 }
 
-func (h *connectHandler) Events(ctx context.Context, req *connect.Request[emptypb.Empty], writeStream *connect.ServerStream[nodev1pb.RuntimeEventsResponse]) error {
+func (h *grpcHandler) Events(ctx context.Context, req *connect.Request[emptypb.Empty], writeStream *connect.ServerStream[nodev1pb.RuntimeEventsResponse]) error {
 	initClient, closeClient := h.runtime.newInitClient()
 	defer closeClient()
 
@@ -128,7 +181,7 @@ func (h *connectHandler) Events(ctx context.Context, req *connect.Request[emptyp
 	}
 }
 
-func (h *connectHandler) mapInitEvent(baseEvent *nodev1pb.InitEventsResponse) *nodev1pb.RuntimeEventsResponse {
+func (h *grpcHandler) mapInitEvent(baseEvent *nodev1pb.InitEventsResponse) *nodev1pb.RuntimeEventsResponse {
 	switch event := baseEvent.Event.(type) {
 	case *nodev1pb.InitEventsResponse_ContainerStateChanged:
 		return &nodev1pb.RuntimeEventsResponse{
