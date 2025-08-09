@@ -3,6 +3,8 @@ package machineservice
 import (
 	"context"
 	"fmt"
+	"log/slog"
+
 	coretypes "github.com/baepo-cloud/baepo-node/core/types"
 	"github.com/baepo-cloud/baepo-node/core/v1pbadapter"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/machineservice/machinecontroller"
@@ -12,20 +14,20 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gorm.io/gorm/clause"
-	"log/slog"
 )
 
 func (s *Service) handleMachineEventsStorage(machine *types.Machine) func(context.Context, any) {
 	return func(ctx context.Context, anyEvent any) {
 		var machineEvent *types.MachineEvent
 		var protoMessage proto.Message
+		var container *types.Container
+
 		switch event := anyEvent.(type) {
 		case *machinecontroller.DesiredStateChangedMessage:
 			machineEvent = &types.MachineEvent{
 				ID:        cuid2.Generate(),
 				Type:      types.MachineEventTypeDesiredStateChanged,
 				MachineID: machine.ID,
-				Machine:   machine,
 				Timestamp: event.Timestamp,
 			}
 			protoMessage = &corev1pb.MachineEvent{
@@ -43,7 +45,6 @@ func (s *Service) handleMachineEventsStorage(machine *types.Machine) func(contex
 				ID:        cuid2.Generate(),
 				Type:      types.MachineEventTypeStateChanged,
 				MachineID: machine.ID,
-				Machine:   machine,
 				Timestamp: event.Timestamp,
 			}
 			protoMessage = &corev1pb.MachineEvent{
@@ -57,7 +58,6 @@ func (s *Service) handleMachineEventsStorage(machine *types.Machine) func(contex
 				},
 			}
 		case *machinecontroller.ContainerStateChangedMessage:
-			var container *types.Container
 			for _, current := range machine.Containers {
 				if current.ID == event.Event.ContainerId {
 					container = current
@@ -72,9 +72,7 @@ func (s *Service) handleMachineEventsStorage(machine *types.Machine) func(contex
 				ID:          event.EventID,
 				Type:        types.MachineEventTypeContainerStateChanged,
 				MachineID:   machine.ID,
-				Machine:     machine,
 				ContainerID: &container.ID,
-				Container:   container,
 				Timestamp:   event.Timestamp,
 			}
 			protoMessage = &corev1pb.ContainerEvent{
@@ -112,6 +110,8 @@ func (s *Service) handleMachineEventsStorage(machine *types.Machine) func(contex
 			return
 		}
 
+		machineEvent.Machine = machine
+		machineEvent.Container = container
 		s.machineEvents.PublishEvent(machineEvent)
 	}
 }

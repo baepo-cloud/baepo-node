@@ -3,14 +3,12 @@ package eventbus
 import (
 	"context"
 	"sync"
-	"sync/atomic"
 
 	"github.com/nrednav/cuid2"
 	"github.com/sourcegraph/conc/pool"
 )
 
 type Bus[T any] struct {
-	closed            atomic.Bool
 	eventsChan        chan T
 	eventHandlers     map[string]func(context.Context, T)
 	eventHandlersLock sync.RWMutex
@@ -26,9 +24,7 @@ func NewBus[T any]() *Bus[T] {
 
 func (b *Bus[T]) PublishEvent(event T) {
 	go func() {
-		if !b.closed.Load() {
-			b.eventsChan <- event
-		}
+		b.eventsChan <- event
 	}()
 }
 
@@ -46,11 +42,6 @@ func (b *Bus[T]) SubscribeToEvents(handler func(context.Context, T)) func() {
 }
 
 func (b *Bus[T]) StartDispatcher(ctx context.Context) {
-	defer func() {
-		b.closed.Store(true)
-		close(b.eventsChan)
-	}()
-
 	for {
 		select {
 		case <-ctx.Done():
