@@ -3,6 +3,7 @@ package machinecontroller
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -133,5 +134,7 @@ func (c *Controller) SetState(updater func(state *State) error) error {
 }
 
 func (c *Controller) SetDesiredState(desiredState coretypes.MachineDesiredState) {
+	c.log.Debug("setting new desired state",
+		slog.String("caller", strings.Join(typeutil.StackTrace(), ", ")))
 	c.eventBus.PublishEvent(NewDesiredStateChangedMessage(desiredState))
 }

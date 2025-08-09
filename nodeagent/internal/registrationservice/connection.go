@@ -87,7 +87,8 @@ func (c *Connection) dispatchLoop(ctx context.Context) error {
 func (c *Connection) handleIncomingEvent(ctx context.Context, anyEvent *apiv1pb.NodeControllerServerEvent) error {
 	switch event := anyEvent.Event.(type) {
 	case *apiv1pb.NodeControllerServerEvent_CreateMachine:
-		return c.createMachine(ctx, event.CreateMachine)
+		_, err := c.createMachine(ctx, event.CreateMachine)
+		return err
 	case *apiv1pb.NodeControllerServerEvent_UpdateMachineDesiredState:
 		_, err := c.service.machineService.UpdateDesiredState(ctx, types.MachineUpdateDesiredStateOptions{
 			MachineID:    event.UpdateMachineDesiredState.MachineId,

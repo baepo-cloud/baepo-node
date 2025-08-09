@@ -74,7 +74,8 @@ func (c *Connection) syncMachineFromSpec(ctx context.Context, spec *apiv1pb.Node
 			shouldSendFakeTerminationEvents = true
 		} else {
 			log.Info("missing machine, creating")
-			if err = c.createMachine(ctx, spec); err != nil {
+			machine, err = c.createMachine(ctx, spec)
+			if err != nil {
 				return nil, fmt.Errorf("failed to create machine: %w", err)
 			}
 		}
@@ -142,7 +143,7 @@ func (c *Connection) syncMachineFromSpec(ctx context.Context, spec *apiv1pb.Node
 	return machine, nil
 }
 
-func (c *Connection) createMachine(ctx context.Context, machine *apiv1pb.NodeControllerServerEvent_Machine) error {
+func (c *Connection) createMachine(ctx context.Context, machine *apiv1pb.NodeControllerServerEvent_Machine) (*types.Machine, error) {
 	opts := types.MachineCreateOptions{
 		MachineID:    machine.MachineId,
 		DesiredState: v1pbadapter.ToMachineDesiredState(machine.DesiredState),
@@ -156,8 +157,7 @@ func (c *Connection) createMachine(ctx context.Context, machine *apiv1pb.NodeCon
 		}
 	}
 
-	_, err := c.service.machineService.Create(ctx, opts)
-	return err
+	return c.service.machineService.Create(ctx, opts)
 }
 
 func (c *Connection) sendMachineEvent(ctx context.Context, event *types.MachineEvent) error {

@@ -2,6 +2,7 @@ package machineservice
 
 import (
 	"context"
+
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 )
 
