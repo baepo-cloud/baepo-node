@@ -2,10 +2,11 @@ package eventbus
 
 import (
 	"context"
-	"github.com/nrednav/cuid2"
-	"github.com/sourcegraph/conc/pool"
 	"sync"
 	"sync/atomic"
+
+	"github.com/nrednav/cuid2"
+	"github.com/sourcegraph/conc/pool"
 )
 
 type Bus[T any] struct {
@@ -25,7 +26,7 @@ func NewBus[T any]() *Bus[T] {
 
 func (b *Bus[T]) PublishEvent(event T) {
 	go func() {
-		if b.closed.Load() {
+		if !b.closed.Load() {
 			b.eventsChan <- event
 		}
 	}()

@@ -3,9 +3,10 @@ package volumeprovider
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/baepo-cloud/baepo-node/core/typeutil"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
-	"time"
 )
 
 func (p *Provider) Allocate(ctx context.Context, volume *types.Volume) error {
@@ -43,7 +44,7 @@ func (p *Provider) Allocate(ctx context.Context, volume *types.Volume) error {
 		}
 	}
 
-	err := p.runCmd(ctx, "/usr/bin/lvcreate", args...)
+	err := p.runCmd(ctx, "lvcreate", args...)
 	if err != nil {
 		return fmt.Errorf("failed to create logical volume: %w", err)
 	}

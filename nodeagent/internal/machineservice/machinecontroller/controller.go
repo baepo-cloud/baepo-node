@@ -2,15 +2,16 @@ package machinecontroller
 
 import (
 	"context"
+	"log/slog"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/baepo-cloud/baepo-node/core/eventbus"
 	coretypes "github.com/baepo-cloud/baepo-node/core/types"
 	"github.com/baepo-cloud/baepo-node/core/typeutil"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	"gorm.io/gorm"
-	"log/slog"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 type (
@@ -65,6 +66,7 @@ func New(
 	ctrl.wg.Add(1)
 	go func() {
 		defer ctrl.wg.Done()
+
 		ctrl.eventBus.StartDispatcher(ctx)
 	}()
 
@@ -84,7 +86,7 @@ func (c *Controller) Stop() error {
 	waitChan := make(chan struct{}, 1)
 	go func() {
 		defer close(waitChan)
-		
+
 		c.wg.Wait()
 		waitChan <- struct{}{}
 	}()

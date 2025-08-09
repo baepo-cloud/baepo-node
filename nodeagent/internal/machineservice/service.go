@@ -3,13 +3,14 @@ package machineservice
 import (
 	"context"
 	"fmt"
+	"log/slog"
+
 	"github.com/alphadose/haxmap"
 	"github.com/baepo-cloud/baepo-node/core/eventbus"
 	coretypes "github.com/baepo-cloud/baepo-node/core/types"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/machineservice/machinecontroller"
 	"github.com/baepo-cloud/baepo-node/nodeagent/internal/types"
 	"gorm.io/gorm"
-	"log/slog"
 )
 
 type Service struct {
