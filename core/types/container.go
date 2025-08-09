@@ -7,14 +7,15 @@ type (
 	}
 
 	ContainerSpec struct {
-		Name        *string
-		Image       string
-		Env         map[string]string
-		Command     []string
-		User        *string
-		Healthcheck *ContainerHealthcheckSpec
-		WorkingDir  *string
-		Restart     *ContainerRestartSpec
+		Name          *string
+		Image         string
+		LazyloadImage bool
+		Env           map[string]string
+		Command       []string
+		User          *string
+		Healthcheck   *ContainerHealthcheckSpec
+		WorkingDir    *string
+		Restart       *ContainerRestartSpec
 	}
 
 	ContainerHealthcheckSpec struct {

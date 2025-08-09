@@ -14,5 +14,7 @@ github.com/baepo-cloud/baepo-proto/go v0.0.0-20250808072756-bd24769745cc h1:kOfB
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250808072756-bd24769745cc/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250808102228-88fd923179a3 h1:2GFlN1qZx9Te38wjRFFFkM8C02Jg/qI7YmXIufl0ysc=
 github.com/baepo-cloud/baepo-proto/go v0.0.0-20250808102228-88fd923179a3/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
+github.com/baepo-cloud/baepo-proto/go v0.0.0-20250809204413-928fceaf4d88 h1:Rj9Re4DCFTkEZ3oY0XnVzkHW+V/1b5s+blbsNsTUJKU=
+github.com/baepo-cloud/baepo-proto/go v0.0.0-20250809204413-928fceaf4d88/go.mod h1:q5i4PqCDD13U2YZdz1BSlDwDrCuTVHxG4CK5wDRhvws=
 github.com/spf13/pflag v1.0.7 h1:vN6T9TfwStFPFM5XzjsvmzZkLuaLX+HS+0SeFLRgU6M=
 github.com/spf13/pflag v1.0.7/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=

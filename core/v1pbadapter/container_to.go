@@ -11,13 +11,14 @@ func ToContainerSpec(spec *corev1pb.ContainerSpec) *types.ContainerSpec {
 	}
 
 	return &types.ContainerSpec{
-		Name:        spec.Name,
-		Image:       spec.Image,
-		Env:         spec.Env,
-		Command:     spec.Command,
-		Healthcheck: ToContainerHealthcheckSpec(spec.Healthcheck),
-		WorkingDir:  spec.WorkingDir,
-		Restart:     ToContainerRestartSpec(spec.Restart),
+		Name:          spec.Name,
+		Image:         spec.Image,
+		LazyloadImage: spec.LazyloadImage,
+		Env:           spec.Env,
+		Command:       spec.Command,
+		Healthcheck:   ToContainerHealthcheckSpec(spec.Healthcheck),
+		WorkingDir:    spec.WorkingDir,
+		Restart:       ToContainerRestartSpec(spec.Restart),
 	}
 }
 
